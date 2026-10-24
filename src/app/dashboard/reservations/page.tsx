@@ -9,12 +9,14 @@ function todayInBerlin() {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
-export default async function ReservationsPage() {
+export default async function ReservationsPage({ searchParams }: { searchParams?: Promise<{ date?: string }> }) {
   const today = todayInBerlin();
   const monthStart = `${today.slice(0, 7)}-01`;
   const next = new Date(`${today.slice(0, 7)}-15T12:00:00Z`);
   next.setUTCMonth(next.getUTCMonth() + 1, 0);
   const monthEnd = next.toISOString().slice(0, 10);
   const initial = await loadReservations(monthStart, monthEnd);
-  return <ReservationsLive today={today} initialStart={monthStart} initialEnd={monthEnd} initial={initial} />;
+  const requestedDate = (await searchParams)?.date;
+  const initialDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : today;
+  return <ReservationsLive today={today} initialStart={monthStart} initialEnd={monthEnd} initial={initial} initialDate={initialDate} />;
 }

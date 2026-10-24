@@ -7,13 +7,9 @@ import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
 import { checkReservationAvailability, loadReservations, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus } from "@/app/dashboard/actions";
 
-type Range = "day" | "week" | "month";
 type StatusFilter = "all" | LiveReservation["status"];
 const statusClass: Record<ReservationStatus, string> = { pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", completed: "status-completed", cancelled: "status-cancelled", no_show: "status-no-show" };
 const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const startOfWeek = (date: Date) => { const value = new Date(date); value.setDate(value.getDate() - ((value.getDay() + 6) % 7)); return value; };
-const endOfWeek = (date: Date) => { const value = startOfWeek(date); value.setDate(value.getDate() + 6); return value; };
-const monthBounds = (date: Date) => ({ start: new Date(date.getFullYear(), date.getMonth(), 1), end: new Date(date.getFullYear(), date.getMonth() + 1, 0) });
 const activeStatuses = new Set<ReservationStatus>(["pending", "confirmed", "arrived"]);
 const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPACITY_CONFIG: "capacityConfig", PAST: "past", BOOKING_WINDOW: "bookingWindow", GUEST_LIMIT: "guestLimit", CLOSED: "closed", OUTSIDE_HOURS: "outsideHours", INVALID_SLOT: "invalidSlot", RESERVATION_FULL: "full", RULE_EXCEPTION_REQUIRED: "exceptionRequired", RULE_EXCEPTION_FORBIDDEN: "exceptionForbidden", NOT_FOUND: "notFound", INVALID_TRANSITION: "invalidTransition", NO_SHOW_TOO_EARLY: "noShowTooEarly", NOT_STAFF: "notStaff", UNAVAILABLE: "unavailable", VISIT_STILL_ACTIVE: "visitStillActive", OCCUPANCY_TIMESTAMP_FORBIDDEN: "occupancyTimestampForbidden" };
 const lateThresholdMs = 15 * 60_000;
@@ -39,48 +35,13 @@ function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: n
   </span>;
 }
 
-function WeekSummary({ start, selected, reservations, locale }: { start: Date; selected: string; reservations: LiveReservation[]; locale: string }) {
-  const c = useTranslations("Common");
-  const days = Array.from({ length: 7 }, (_, index) => { const value = new Date(start); value.setDate(start.getDate() + index); return value; });
-  return <section className="week-summary" aria-label={c("bookings")}>
-    {days.map((day) => {
-      const dayKey = key(day); const count = reservations.filter((item) => item.date === dayKey).length; const active = dayKey === selected;
-      return <article className={`week-day-card${active ? " is-selected" : ""}`} key={dayKey}>
-        <span className="week-day-label">{new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", timeZone: "Europe/Berlin" }).format(day)}</span>
-        <strong>{count}</strong>
-        <span className="week-mini-bars" aria-hidden="true">{[.45, .72, 1, .68].map((height, index) => <i key={index} style={{ height: `${Math.max(7, Math.round((count + 5) * height))}px` }} />)}</span>
-        <span className="week-day-caption">{c("bookings")}</span>
-      </article>;
-    })}
-  </section>;
-}
-
-function MonthCalendar({ month, selected, reservations, locale }: { month: Date; selected: string; reservations: LiveReservation[]; locale: string }) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const offset = (first.getDay() + 6) % 7;
-  const gridStart = new Date(first); gridStart.setDate(first.getDate() - offset);
-  const days = Array.from({ length: 42 }, (_, index) => { const value = new Date(gridStart); value.setDate(gridStart.getDate() + index); return value; });
-  const weekdays = Array.from({ length: 7 }, (_, index) => { const value = new Date(2026, 9, 19 + index); return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(value); });
-  return <section className="month-calendar" aria-label={new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month)}>
-    <div className="month-weekdays">{weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
-    <div className="month-grid">{days.map((day) => {
-      const dayKey = key(day); const items = reservations.filter((item) => item.date === dayKey); const outside = day.getMonth() !== month.getMonth();
-      const sources = Array.from(new Set(items.map((item) => item.source))).slice(0, 2);
-      return <article className={`month-day${outside ? " is-outside" : ""}${dayKey === selected ? " is-selected" : ""}`} key={dayKey}>
-        <strong>{day.getDate()}</strong><span className="month-source-dots" aria-hidden="true">{sources.map((source) => <i className={`source-${source}`} key={source} />)}</span>{!outside && items.length ? <span>{items.length}</span> : null}
-      </article>;
-    })}</div>
-  </section>;
-}
-
-export function ReservationsLive({ today, initialStart, initialEnd, initial }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult }) {
+export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
-  const [date, setDate] = useState(new Date(`${today}T12:00:00`)); const [range, setRange] = useState<Range>("day"); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
+  const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd });
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
-  const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
-  const start = key(bounds.start); const end = key(bounds.end);
+  const start = key(date); const end = start;
 
   async function refresh() {
     const next = await loadReservations(start, end); setResult(next);
@@ -121,12 +82,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
   const occupiedGuests = periodReservations.filter((item) => item.status === "arrived" && !item.departedAt).reduce((sum, item) => sum + item.guests, 0);
   const noShows = periodReservations.filter((item) => item.status === "no_show").length;
   const format = (value: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { ...options, timeZone: "Europe/Berlin" }).format(value);
-  const title = range === "day" ? format(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : range === "week" ? `${format(bounds.start, { day: "numeric", month: "short" })} – ${format(bounds.end, { day: "numeric", month: "short", year: "numeric" })}` : format(date, { month: "long", year: "numeric" });
+  const title = format(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const statusName = (value: ReservationStatus) => c(value === "no_show" ? "noShow" : value);
   const errorText = !result.ok ? result.reason === "unauthorized" ? c("reservationUnauthorized") : result.reason === "permission" ? c("reservationPermission") : c("reservationLoadError") : "";
   const translatedError = (code: string) => t(`errors.${errorKeys[code] ?? "unavailable"}`);
   const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
-  function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); if (range === "month") next.setMonth(next.getMonth() + direction); else next.setDate(next.getDate() + direction * (range === "week" ? 7 : 1)); return next; }); }
+  function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0]) {
     setError(""); startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
@@ -143,25 +104,23 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
   return <>
-    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previous")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("next")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
-    {range === "day" ? <section className="metric-grid reservations-metrics" aria-label={t("periodLabel")}>
+    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
+    <section className="metric-grid reservations-metrics" aria-label={t("periodLabel")}>
       <MetricCard label={t("count")} value={result.ok ? periodReservations.length : "—"} detail={t("liveDataLabel")} icon={<CalendarDays size={18} />} />
       <MetricCard label={t("expectedGuests")} value={result.ok ? expectedGuests : "—"} detail={t("activeBookingsOnly")} icon={<UsersRound size={18} />} tone="sage" />
       <MetricCard label={t("currentlySeated")} value={result.ok ? occupiedGuests : "—"} detail={t("liveDataLabel")} icon={<UserRoundCheck size={18} />} tone="sage" />
       <MetricCard label={t("noShows")} value={result.ok ? noShows : "—"} detail={t("periodNoShow")} icon={<UserX size={18} />} tone="stone" />
-    </section> : null}
+    </section>
 
-    <div className="reservation-toolbar"><div className="toolbar-upper"><div className="range-switcher" aria-label={t("periodLabel")}>{(["day", "week", "month"] as const).map((item) => <button type="button" key={item} className={`range-button${range === item ? " is-active" : ""}`} onClick={() => setRange(item)}>{t(item)}</button>)}</div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button></div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    <div className="reservation-toolbar"><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
-    {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={key(date)} reservations={shown} locale={locale} /> : null}
-    {range === "month" && result.ok ? <MonthCalendar month={date} selected={key(date)} reservations={shown} locale={locale} /> : null}
     <div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
     {result.ok && !loading && !shown.length ? <div className="empty-search">{query || status !== "all" ? t("noResults") : t("noReservations")}</div> : null}
-    {range !== "month" && result.ok && shown.length ? <>
+    {result.ok && shown.length ? <>
       <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th><th>{t("tableActions")}</th></tr></thead><tbody>
         {shown.map((item) => <tr key={item.id} className={details?.id === item.id ? "is-selected" : undefined}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td><td><button className="table-action-button" aria-label={t("detailsAction", { guest: item.guest })} onClick={() => { setDetails(item); setError(""); }}><MoreHorizontal size={17} /></button></td></tr>)}
       </tbody></table></div>

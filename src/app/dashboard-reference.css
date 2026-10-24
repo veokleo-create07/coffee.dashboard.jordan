@@ -98,6 +98,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservations-metrics { margin-bottom: 18px; }
 
 .reservation-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 15px; }
+.overview-planning-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 15px; }
+.overview-planning-actions { display: flex; align-items: center; gap: 8px; }
+.overview-planning-toolbar .range-switcher { min-width: 330px; }
+.range-switcher > button { min-height: 40px; flex: 1; border: 0; border-radius: 7px; background: transparent; padding: 0 20px; color: #514943; font-size: 12px; cursor: pointer; }
+.range-switcher > button.is-active { background: var(--ref-espresso); color: #fff; }
 .toolbar-upper, .toolbar-lower { display: flex; align-items: center; gap: 10px; }
 .range-switcher, .filter-switcher { display: inline-flex; min-width: 420px; align-items: center; gap: 0; overflow: hidden; border: 1px solid var(--ref-border); border-radius: 8px; background: transparent; padding: 0; }
 .range-button, .filter-button { min-height: 40px; flex: 1; border: 0; border-radius: 7px; background: transparent; padding: 0 20px; color: #514943; font-size: 12px; }
@@ -148,6 +153,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .month-weekdays, .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .month-weekdays span { padding: 13px 4px; color: #47403b; font-size: 11px; text-align: center; }
 .month-day { display: flex; min-height: 104px; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--ref-border); border-radius: 7px; color: #24201d; }
+.month-day { width: 100%; cursor: pointer; font: inherit; }
 .month-day strong { font-size: 16px; }
 .month-day > span:last-child { margin-top: 7px; font-size: 11px; }
 .month-day.is-outside { color: #b1aaa3; background: rgba(245, 241, 235, .48); }
@@ -224,6 +230,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .metric-card { gap: 11px; padding: 15px; }
   .metric-icon { width: 48px; height: 48px; flex-basis: 48px; }
   .range-switcher { min-width: 340px; }
+  .overview-planning-toolbar .range-switcher { min-width: 300px; }
   .week-summary { gap: 6px; }
 }
 
@@ -241,6 +248,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .new-booking-button { min-height: 40px; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .range-switcher { min-width: 300px; }
+  .overview-planning-toolbar { align-items: flex-start; flex-direction: column; }
+  .overview-planning-toolbar .range-switcher { width: 100%; min-width: 0; }
   .reservation-toolbar { align-items: flex-start; }
   .toolbar-lower { flex-wrap: wrap; justify-content: flex-end; }
   .week-summary { grid-template-columns: repeat(4, 1fr); }
@@ -286,6 +295,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .metric-label { font-size: 9px; }
   .metric-detail { display: none; }
   .reservation-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .overview-planning-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .overview-planning-actions { width: 100%; }
+  .overview-planning-actions .date-controls { flex: 1; }
+  .overview-planning-toolbar .range-switcher { min-width: 0; width: 100%; }
   .toolbar-upper, .toolbar-lower { width: 100%; }
   .range-switcher { min-width: 0; width: 100%; }
   .range-button { min-height: 38px; padding: 0 9px; }
