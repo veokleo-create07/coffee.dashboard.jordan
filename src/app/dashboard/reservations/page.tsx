@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Eye, Pencil, Phone, Plus, Search, UserRound, UsersRound, X } from "lucide-react";
-import { PageIntro } from "@/components/dashboard/primitives";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Coffee, Eye, Pencil, Phone, Plus, Search, UserRound, UsersRound, X } from "lucide-react";
+import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, ReservationForm, Toast, type ReservationInput } from "@/components/dashboard/dialog";
 import { mockReservations, statusLabels, type Reservation, type ReservationStatus } from "@/lib/dashboard/mock-data";
 
@@ -96,8 +96,19 @@ export default function ReservationsPage() {
   }
 
   const bounds = rangeBounds(date, range);
+  const activeBookings = shown.filter((reservation) => reservation.status !== "cancelled");
+  const expectedGuests = activeBookings.reduce((sum, reservation) => sum + reservation.guests, 0);
+  const seatedGuests = activeBookings.filter((reservation) => reservation.status === "seated").reduce((sum, reservation) => sum + reservation.guests, 0);
+  const noShows = shown.filter((reservation) => reservation.status === "no-show").length;
   return <>
     <PageIntro eyebrow="Tisch für Tisch" title="Reservierungen" description="Der Überblick für gute Gastgebermomente." action={<button className="button-primary" onClick={() => setShowNew(true)}><Plus size={15} /><span>Neue Reservierung</span></button>} />
+
+    <section className="metric-grid reservations-metrics" aria-label="Kennzahlen für den gewählten Zeitraum">
+      <MetricCard label="Reservierungen" value={activeBookings.length} detail={periodTitle(date, range)} icon={<CalendarDays size={15} />} />
+      <MetricCard label="Erwartete Gäste" value={expectedGuests} detail="im gewählten Zeitraum" icon={<UsersRound size={15} />} tone="sage" />
+      <MetricCard label="Gerade am Tisch" value={seatedGuests} detail="von 26 Plätzen" icon={<Coffee size={15} />} tone="gold" />
+      <MetricCard label="Nicht erschienen" value={noShows} detail="im gewählten Zeitraum" icon={<Clock3 size={15} />} tone="stone" />
+    </section>
 
     <div className="reservation-toolbar">
       <div className="toolbar-upper">

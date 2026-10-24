@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Coffee, LayoutDashboard, UsersRound, UtensilsCrossed } from "lucide-react";
+import { BarChart3, Heart, LayoutDashboard, UsersRound, UtensilsCrossed } from "lucide-react";
 
 const links = [
   { label: "Übersicht", href: "/dashboard", icon: LayoutDashboard },
@@ -12,9 +12,10 @@ const links = [
 ];
 
 function Brand() {
-  return <Link href="/dashboard" className="group flex items-center gap-3" aria-label="Altstadtliebe Teamübersicht">
-    <span className="grid size-10 place-items-center rounded-full bg-[#3c2d24] text-[#f7f4ed] transition group-hover:bg-[#684b37]"><Coffee size={18} strokeWidth={1.7} /></span>
-    <span className="text-[16px] font-semibold tracking-[-0.055em] text-[#332920]">altstadtliebe<span className="font-normal text-[#93684c]">.</span><span className="ml-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[#989084]">Team</span></span>
+  return <Link href="/dashboard" className="brand-lockup group" aria-label="Altstadtliebe Teamübersicht">
+    <Heart className="brand-heart" size={12} strokeWidth={1.8} fill="currentColor" />
+    <span className="brand-wordmark">Altstadtliebe</span>
+    <span className="brand-team">Team Dashboard</span>
   </Link>;
 }
 
