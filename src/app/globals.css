@@ -595,3 +595,27 @@ body { background: #f4f0e8; letter-spacing: -.01em; }
   .analytics-unavailable { min-height: 12rem; padding: 1.5rem; }
   .reservations-summary { flex-wrap: wrap; gap: 0.5rem; }
 }
+
+/* Live reservation management */
+.status-pending { background: #f5ecdf; color: #9c6c39; }
+.reservation-management-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.reservation-management-actions .button-secondary { display: inline-flex; align-items: center; gap: 6px; }
+.new-booking-button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.availability-check { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.availability-check p { margin: 0; font-size: 11px; }
+.availability-success { color: #63755d; }
+.availability-error, .form-error { color: #a25f52; }
+.form-error { margin: 14px 0 0; font-size: 12px; }
+.exception-panel { margin-top: 13px; border: 1px solid #dfcfb8; border-radius: 9px; padding: 12px; background: #faf6ef; }
+.exception-panel > p { margin: 7px 0 0 23px; color: #85796b; font-size: 10px; line-height: 1.5; }
+.exception-checkbox { display: flex; align-items: center; gap: 8px; color: #57483a; font-size: 11px; }
+.exception-checkbox input { accent-color: #39291f; }
+.exception-panel .form-field { margin-top: 11px; }
+.cancel-confirm-copy { margin: 0 0 10px; color: var(--ink); font-size: 13px; line-height: 1.6; }
+.danger-action { color: #a25f52; }
+.button-danger { border: 1px solid #ead7d1; border-radius: 8px; background: #a45f51; color: white; padding: 9px 13px; font: inherit; cursor: pointer; }
+.button-primary:disabled, .button-secondary:disabled, .button-danger:disabled { opacity: .55; cursor: wait; }
+.spin { animation: reservation-spin .9s linear infinite; }
+@keyframes reservation-spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { .toolbar-upper { flex-wrap: wrap; } .new-booking-button { margin-left: auto; } }
+@media (max-width: 600px) { .new-booking-button { min-height: 36px; } .reservation-management-actions { display: grid; grid-template-columns: 1fr 1fr; } .reservation-management-actions button { justify-content: center; } .availability-check { align-items: flex-start; flex-direction: column; } }

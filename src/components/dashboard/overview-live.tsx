@@ -7,7 +7,7 @@ import type { LiveReservation, ReservationLoadResult } from "@/app/dashboard/act
 import { useLocale, useTranslations } from "next-intl";
 
 const statusClass: Record<LiveReservation["status"], string> = {
-  pending: "status-arrived", confirmed: "status-confirmed", cancelled: "status-cancelled", completed: "status-completed",
+  pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", cancelled: "status-cancelled", completed: "status-completed", no_show: "status-no-show",
 };
 
 export function OverviewLive({ today, initial }: { today: string; initial: ReservationLoadResult }) {
@@ -15,14 +15,14 @@ export function OverviewLive({ today, initial }: { today: string; initial: Reser
   const c = useTranslations("Common");
   const locale = useLocale();
   const dateLabel = (date: string) => new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin" }).format(new Date(`${date}T12:00:00Z`));
-  const statusLabel = (status: LiveReservation["status"]) => c(status);
+  const statusLabel = (status: LiveReservation["status"]) => c(status === "no_show" ? "noShow" : status);
   const reservations = initial.ok ? initial.reservations : [];
   const todayBookings = reservations.filter((reservation) => reservation.date === today);
-  const activeToday = todayBookings.filter((reservation) => reservation.status === "pending" || reservation.status === "confirmed");
+  const activeToday = todayBookings.filter((reservation) => ["pending", "confirmed", "arrived"].includes(reservation.status));
   const expectedGuests = activeToday.reduce((sum, reservation) => sum + reservation.guests, 0);
   const pending = todayBookings.filter((reservation) => reservation.status === "pending").length;
   const currentTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const upcoming = reservations.filter((reservation) => (reservation.date > today || (reservation.date === today && reservation.time >= currentTime)) && (reservation.status === "pending" || reservation.status === "confirmed")).slice(0, 5);
+  const upcoming = reservations.filter((reservation) => (reservation.date > today || (reservation.date === today && reservation.time >= currentTime)) && (["pending", "confirmed", "arrived"].includes(reservation.status))).slice(0, 5);
   const errorText = initial.ok ? "" : initial.reason === "unauthorized" ? c("reservationUnauthorized") : initial.reason === "permission" ? c("reservationPermission") : c("reservationLoadError");
 
   return <>
@@ -39,11 +39,11 @@ export function OverviewLive({ today, initial }: { today: string; initial: Reser
       <article className="panel overview-table">
         <PanelHeading title={t("todayList")} detail={t("todayDetail", { count: todayBookings.length })} action={<SectionLink href="/dashboard/reservations">{t("allBookings")}</SectionLink>} />
         {initial.ok && todayBookings.length ? <div className="table-wrap"><table className="data-table">
-          <thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th className="hide-mobile">{t("tableReference")}</th></tr></thead>
+          <thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th className="hide-mobile">{t("tableReference")}</th><th className="hide-mobile">{t("tableSource")}</th></tr></thead>
           <tbody>{todayBookings.slice(0, 8).map((reservation) => <tr key={reservation.id}>
             <td className="time-cell">{reservation.time}</td><td><span className="guest-primary">{reservation.guest}</span>{reservation.note ? <span className="guest-secondary">{reservation.note}</span> : null}</td>
             <td>{new Intl.NumberFormat(locale).format(reservation.guests)} <span style={{ color: "#aaa194" }}>{c("personShort")}</span></td>
-            <td><span className={`status-pill ${statusClass[reservation.status]}`}>{statusLabel(reservation.status)}</span></td><td className="source-tag hide-mobile">{reservation.reference}</td>
+            <td><span className={`status-pill ${statusClass[reservation.status]}`}>{statusLabel(reservation.status)}</span></td><td className="source-tag hide-mobile">{reservation.reference}</td><td className="hide-mobile">{reservation.source === "website" ? c("online") : reservation.source === "phone" ? c("telephone") : c("walkIn")}</td>
           </tr>)}</tbody>
         </table></div> : initial.ok ? <p className="live-empty-state">{t("noTodayReservations")}</p> : null}
         <div className="mobile-table-link"><SectionLink href="/dashboard/reservations">{t("openAll")}</SectionLink></div>
