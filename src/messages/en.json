@@ -53,6 +53,8 @@
     "hours": "",
     "noEmail": "No email address provided",
     "noRequests": "No special requests noted.",
+    "noSpecialRequests": "No special requests",
+    "moreActions": "More actions",
     "sampleDisclaimer": "Sample content · changes are not sent to Supabase.",
     "mockOnly": "Changes are not saved.",
     "samplePreview": "Local sample preview · no backend",

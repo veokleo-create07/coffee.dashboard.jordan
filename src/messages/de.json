@@ -53,6 +53,8 @@
     "hours": "Uhr",
     "noEmail": "Keine E-Mail-Adresse hinterlegt",
     "noRequests": "Keine besonderen Wünsche notiert.",
+    "noSpecialRequests": "Keine besonderen Wünsche",
+    "moreActions": "Weitere Aktionen",
     "sampleDisclaimer": "Beispielinhalt · Änderungen werden nicht an Supabase übertragen.",
     "mockOnly": "Änderungen werden nicht gespeichert.",
     "samplePreview": "Lokale Mock-Vorschau · kein Backend",
