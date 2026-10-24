@@ -21,6 +21,7 @@
     "today": "Heute",
     "all": "Alle",
     "confirmed": "Bestätigt",
+    "pending": "Ausstehend",
     "arrived": "Eingetroffen",
     "seated": "Am Tisch",
     "completed": "Abgeschlossen",
@@ -92,7 +93,10 @@
     "validationName": "Bitte einen Namen eingeben.",
     "validationDate": "Bitte ein Datum auswählen.",
     "validationTime": "Bitte eine Uhrzeit auswählen.",
-    "required": "Pflichtfeld"
+    "required": "Pflichtfeld",
+    "reservationUnauthorized": "Deine Anmeldung konnte nicht bestätigt werden. Bitte melde dich erneut an.",
+    "reservationPermission": "Der Datenbankzugriff für Mitarbeitende ist noch nicht freigeschaltet.",
+    "reservationLoadError": "Reservierungen konnten gerade nicht geladen werden. Bitte versuche es erneut."
   },
   "Overview": {
     "eyebrow": "Samstag, 24. Oktober 2026",
@@ -108,7 +112,7 @@
     "newMock": "Mock-Reservierung anlegen",
     "metrics": "Kennzahlen für heute",
     "allToday": "Reservierungen heute",
-    "todayDetail": "{count} Buchungen · Samstag",
+    "todayDetail": "{count} Reservierungen heute",
     "guestsShort": "Gäste",
     "seatsFree": "Plätze frei im Moment",
     "capacityMeta": "Zuletzt aktualisiert · Mock-Daten",
@@ -125,7 +129,12 @@
     "openAll": "Alle ansehen",
     "openToday": "Tagesplan öffnen",
     "today": "Heute",
-    "later": "Demnächst"
+    "later": "Demnächst",
+    "liveDataLabel": "Live aus Supabase",
+    "pendingDetail": "Wartet auf Bestätigung",
+    "tableReference": "Buchungsnummer",
+    "noTodayReservations": "Für heute liegen keine Reservierungen vor.",
+    "noUpcomingReservations": "Es gibt keine anstehenden Reservierungen."
   },
   "Reservations": {
     "eyebrow": "Tisch für Tisch",
@@ -155,10 +164,17 @@
     "previous": "Vorheriger Zeitraum",
     "next": "Nächster Zeitraum",
     "searchLabel": "Reservierungen suchen",
-    "searchPlaceholder": "Gast, Telefon oder Buchungsnr.",
+    "searchPlaceholder": "Gast, E-Mail oder Buchungsnummer",
     "sourceFilter": "Quelle filtern",
     "resultsOne": "Reservierung",
     "resultsMany": "Reservierungen",
+    "resultCount": "{count} Reservierungen",
+    "liveDataLabel": "Live aus Supabase",
+    "activeBookingsOnly": "Ausstehend oder bestätigt",
+    "loading": "Reservierungen werden geladen …",
+    "noReservations": "Für diesen Zeitraum liegen keine Reservierungen vor.",
+    "tableReference": "Buchungsnr.",
+    "tableRequests": "Besondere Wünsche",
     "mockData": "Mock-Daten",
     "weekFrom": "Woche vom {date}",
     "expectedGuests": "Gäste erwartet",
@@ -267,7 +283,9 @@
     "monthlyInsights": "Monatliche Einblicke in Besuche und Buchungen.",
     "online": "Online",
     "telephone": "Telefon",
-    "walkIn": "Walk-in"
+    "walkIn": "Walk-in",
+    "liveSetupTitle": "Analysen folgen",
+    "liveSetupDescription": "Analysen werden angezeigt, sobald Live-Daten dafür verfügbar sind. Hier erscheinen keine Beispieldaten."
   },
   "Login": {
     "title": "Schön, dass du da bist.",

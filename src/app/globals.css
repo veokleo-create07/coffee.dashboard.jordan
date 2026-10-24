@@ -537,3 +537,61 @@ body { background: #f4f0e8; letter-spacing: -.01em; }
   .modal-backdrop { align-items: end; padding: 8px; }
   .modal-card { width: 100%; min-height: 0; max-height: calc(100vh - 18px); overflow-y: auto; border: 1px solid var(--line); border-radius: 13px; }
 }
+.live-data-alert {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #dcc9b7;
+  border-radius: 0.8rem;
+  background: #f8f1e9;
+  color: #513b2c;
+  font-size: 0.9rem;
+}
+
+.live-empty-state {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  color: #81766b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.analytics-unavailable {
+  min-height: 15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.analytics-placeholder-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  margin-bottom: 1rem;
+  border: 1px solid #e6ddd2;
+  border-radius: 50%;
+  color: #76563e;
+}
+
+.analytics-unavailable h2 {
+  margin: 0;
+  color: #30251d;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.analytics-unavailable p {
+  max-width: 30rem;
+  margin: 0.5rem 0 0;
+  color: #81766b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .analytics-unavailable { min-height: 12rem; padding: 1.5rem; }
+  .reservations-summary { flex-wrap: wrap; gap: 0.5rem; }
+}

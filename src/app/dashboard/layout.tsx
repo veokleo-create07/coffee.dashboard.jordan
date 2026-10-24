@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const user = await requireStaff();
   const t = await getTranslations("Navigation");
   const locale = await getLocale();
-  const date = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date("2026-10-24T12:00:00"));
+  const date = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin" }).format(new Date());
 
   return (
     <div className="dashboard-frame">

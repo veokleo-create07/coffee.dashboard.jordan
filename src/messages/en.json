@@ -21,6 +21,7 @@
     "today": "Today",
     "all": "All",
     "confirmed": "Confirmed",
+    "pending": "Pending",
     "arrived": "Arrived",
     "seated": "Seated",
     "completed": "Completed",
@@ -92,7 +93,10 @@
     "validationName": "Please enter a name.",
     "validationDate": "Please choose a date.",
     "validationTime": "Please choose a time.",
-    "required": "Required"
+    "required": "Required",
+    "reservationUnauthorized": "Your staff session could not be verified. Please sign in again.",
+    "reservationPermission": "Staff database access has not been enabled yet.",
+    "reservationLoadError": "Reservations could not be loaded right now. Please try again."
   },
   "Overview": {
     "eyebrow": "Saturday, October 24, 2026",
@@ -108,7 +112,7 @@
     "newMock": "Add sample reservation",
     "metrics": "Today’s figures",
     "allToday": "Today’s reservations",
-    "todayDetail": "{count} bookings · Saturday",
+    "todayDetail": "{count} reservations today",
     "guestsShort": "Guests",
     "seatsFree": "Seats available right now",
     "capacityMeta": "Last updated · sample data",
@@ -125,7 +129,12 @@
     "openAll": "View all",
     "openToday": "Open day plan",
     "today": "Today",
-    "later": "Coming up"
+    "later": "Coming up",
+    "liveDataLabel": "Live from Supabase",
+    "pendingDetail": "Awaiting confirmation",
+    "tableReference": "Booking reference",
+    "noTodayReservations": "There are no reservations for today.",
+    "noUpcomingReservations": "There are no upcoming reservations."
   },
   "Reservations": {
     "eyebrow": "Table by table",
@@ -155,10 +164,17 @@
     "previous": "Previous period",
     "next": "Next period",
     "searchLabel": "Search reservations",
-    "searchPlaceholder": "Guest, phone or booking no.",
+    "searchPlaceholder": "Guest, email or booking reference",
     "sourceFilter": "Filter by source",
     "resultsOne": "reservation",
     "resultsMany": "reservations",
+    "resultCount": "{count} reservations",
+    "liveDataLabel": "Live from Supabase",
+    "activeBookingsOnly": "Pending or confirmed",
+    "loading": "Loading reservations …",
+    "noReservations": "There are no reservations for this period.",
+    "tableReference": "Reference",
+    "tableRequests": "Special requests",
     "mockData": "Sample data",
     "weekFrom": "Week of {date}",
     "expectedGuests": "guests expected",
@@ -267,7 +283,9 @@
     "monthlyInsights": "Monthly insights into visits and bookings.",
     "online": "Online",
     "telephone": "Phone",
-    "walkIn": "Walk-in"
+    "walkIn": "Walk-in",
+    "liveSetupTitle": "Analytics coming later",
+    "liveSetupDescription": "Analytics will appear when live data is available for this view. No sample figures are shown here."
   },
   "Login": {
     "title": "Welcome back.",
