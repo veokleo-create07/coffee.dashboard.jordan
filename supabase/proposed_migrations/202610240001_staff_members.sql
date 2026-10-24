@@ -9,13 +9,15 @@ create table if not exists public.staff_members (
 );
 
 alter table public.staff_members enable row level security;
+revoke all privileges on table public.staff_members from public, anon, authenticated;
 grant select on public.staff_members to authenticated;
+drop policy if exists "Staff can read their own membership" on public.staff_members;
 create policy "Staff can read their own membership"
   on public.staff_members for select to authenticated
   using (auth.uid() = user_id);
 
--- Members can only read their own membership. No inserts, updates, or deletes
--- are granted. Add members only through a trusted administrative workflow.
+-- Authenticated members can only read their own row. No insert, update, or
+-- delete grants are issued; add members only through a trusted admin workflow.
 
 -- Reservation policies are intentionally untouched. Review and add staff
 -- membership predicates to the existing reservations policy separately. A
