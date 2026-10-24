@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Heart, LayoutDashboard, LogOut, UsersRound, UtensilsCrossed } from "lucide-react";
+import { BarChart3, Heart, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { signOut } from "@/app/dashboard/actions";
@@ -22,7 +22,6 @@ export function DashboardNavigation({ email }: { email?: string | null }) {
   const links = [
     { label: t("overview"), href: "/dashboard", icon: LayoutDashboard },
     { label: t("reservations"), href: "/dashboard/reservations", icon: UtensilsCrossed },
-    { label: t("guests"), href: "/dashboard/guests", icon: UsersRound },
     { label: t("analytics"), href: "/dashboard/analytics", icon: BarChart3 },
   ];
   return <>

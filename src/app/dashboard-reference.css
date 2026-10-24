@@ -214,8 +214,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-management-actions .action-free, .reservation-management-actions button:first-child { border-color: #cfe1c8; background: var(--ref-success-bg); color: var(--ref-success); }
 .reservation-management-actions .danger-action { border-color: #f0c8c4; background: #fff; color: var(--ref-danger); }
 
-.guests-layout { gap: 13px; }
-.guest-profile { border-radius: var(--ref-radius); }
 .analytics-unavailable { min-height: 430px; border-radius: var(--ref-radius); background: rgba(255, 252, 249, .8); }
 
 @media (max-width: 1180px) {

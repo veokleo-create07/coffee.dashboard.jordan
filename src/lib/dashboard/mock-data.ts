@@ -31,29 +31,6 @@ export const mockReservations: Reservation[] = [
   { id: "AL-2710-01", guest: "Sophie Martens", email: "sophie.martens@example.com", phone: "+49 451 520 18 44", date: "2026-10-27", time: "12:00", guests: 6, status: "confirmed", source: "Online" },
 ];
 
-export type Guest = {
-  name: string;
-  email: string;
-  phone: string;
-  visits: number;
-  lastVisit: string;
-  note: string;
-  favorite: string;
-};
-
-export const mockGuests: Guest[] = [
-  { name: "Mila Hartmann", email: "mila.hartmann@example.com", phone: "+49 451 204 18 36", visits: 12, lastVisit: "Heute", note: "Fensterplatz, wenn möglich", favorite: "Flat White" },
-  { name: "Jonas Petersen", email: "jonas.petersen@example.com", phone: "+49 451 702 91 40", visits: 8, lastVisit: "Heute", note: "Kommt gelegentlich mit Hund", favorite: "Filterkaffee" },
-  { name: "Clara Brandt", email: "clara.brandt@example.com", phone: "+49 176 445 91 203", visits: 6, lastVisit: "Heute", note: "Kinderwagen dabei", favorite: "Hafer-Cappuccino" },
-  { name: "Nele Schubert", email: "nele.schubert@example.com", phone: "+49 451 819 22 05", visits: 4, lastVisit: "Heute", note: "Vegetarisch", favorite: "Matcha Latte" },
-  { name: "Mats Jürgens", email: "mats.juergens@example.com", phone: "+49 171 933 02 88", visits: 10, lastVisit: "Heute", note: "Laktosefreie Milch", favorite: "Espresso doppio" },
-  { name: "Amelie Krüger", email: "amelie.krueger@example.com", phone: "+49 451 330 73 61", visits: 3, lastVisit: "Heute", note: "Süßes zum Kaffee", favorite: "Zimtschnecke" },
-  { name: "Frieda Thomsen", email: "frieda.thomsen@example.com", phone: "+49 451 202 85 19", visits: 9, lastVisit: "Heute", note: "Ruhiger Platz", favorite: "Chai Latte" },
-  { name: "Lina Ehlers", email: "lina.ehlers@example.com", phone: "+49 170 508 26 90", visits: 5, lastVisit: "2026-10-18", note: "Nussallergie", favorite: "Cortado" },
-  { name: "Emma Hansen", email: "emma.hansen@example.com", phone: "+49 451 776 28 51", visits: 2, lastVisit: "2026-10-11", note: "Geburtstag im Oktober", favorite: "Heiße Schokolade" },
-  { name: "Sophie Martens", email: "sophie.martens@example.com", phone: "+49 451 520 18 44", visits: 14, lastVisit: "2026-10-05", note: "Feiertagsreservierung", favorite: "Flat White" },
-];
-
 export const statusLabels: Record<ReservationStatus, string> = {
   confirmed: "Bestätigt",
   arrived: "Eingetroffen",
