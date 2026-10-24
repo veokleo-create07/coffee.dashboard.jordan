@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, MoreHorizontal } from "lucide-react";
+import { useLocale } from "next-intl";
 
 export function PageIntro({ eyebrow, title, description, action }: { eyebrow: string; title: string; description?: string; action?: ReactNode }) {
   return <div className="page-intro">
@@ -10,9 +11,11 @@ export function PageIntro({ eyebrow, title, description, action }: { eyebrow: st
 }
 
 export function MetricCard({ label, value, detail, change, icon, tone = "clay" }: { label: string; value: string | number; detail: string; change?: string; icon: ReactNode; tone?: "clay" | "sage" | "gold" | "stone" }) {
+  const locale = useLocale();
+  const formattedValue = typeof value === "number" ? new Intl.NumberFormat(locale).format(value) : value;
   return <article className="metric-card">
     <div className="metric-top"><span className="metric-label">{label}</span><span className={`metric-icon tone-${tone}`}>{icon}</span></div>
-    <div className="metric-value-row"><span className="metric-value">{value}</span>{change ? <span className="metric-change"><ArrowUpRight size={13} />{change}</span> : null}</div>
+    <div className="metric-value-row"><span className="metric-value">{formattedValue}</span>{change ? <span className="metric-change"><ArrowUpRight size={13} />{change}</span> : null}</div>
     <p className="metric-detail">{detail}</p>
   </article>;
 }

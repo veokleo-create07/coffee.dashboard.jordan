@@ -49,9 +49,9 @@ export const mockGuests: Guest[] = [
   { name: "Mats Jürgens", email: "mats.juergens@example.com", phone: "+49 171 933 02 88", visits: 10, lastVisit: "Heute", note: "Laktosefreie Milch", favorite: "Espresso doppio" },
   { name: "Amelie Krüger", email: "amelie.krueger@example.com", phone: "+49 451 330 73 61", visits: 3, lastVisit: "Heute", note: "Süßes zum Kaffee", favorite: "Zimtschnecke" },
   { name: "Frieda Thomsen", email: "frieda.thomsen@example.com", phone: "+49 451 202 85 19", visits: 9, lastVisit: "Heute", note: "Ruhiger Platz", favorite: "Chai Latte" },
-  { name: "Lina Ehlers", email: "lina.ehlers@example.com", phone: "+49 170 508 26 90", visits: 5, lastVisit: "18. Okt. 2026", note: "Nussallergie", favorite: "Cortado" },
-  { name: "Emma Hansen", email: "emma.hansen@example.com", phone: "+49 451 776 28 51", visits: 2, lastVisit: "11. Okt. 2026", note: "Geburtstag im Oktober", favorite: "Heiße Schokolade" },
-  { name: "Sophie Martens", email: "sophie.martens@example.com", phone: "+49 451 520 18 44", visits: 14, lastVisit: "05. Okt. 2026", note: "Feiertagsreservierung", favorite: "Flat White" },
+  { name: "Lina Ehlers", email: "lina.ehlers@example.com", phone: "+49 170 508 26 90", visits: 5, lastVisit: "2026-10-18", note: "Nussallergie", favorite: "Cortado" },
+  { name: "Emma Hansen", email: "emma.hansen@example.com", phone: "+49 451 776 28 51", visits: 2, lastVisit: "2026-10-11", note: "Geburtstag im Oktober", favorite: "Heiße Schokolade" },
+  { name: "Sophie Martens", email: "sophie.martens@example.com", phone: "+49 451 520 18 44", visits: 14, lastVisit: "2026-10-05", note: "Feiertagsreservierung", favorite: "Flat White" },
 ];
 
 export const statusLabels: Record<ReservationStatus, string> = {

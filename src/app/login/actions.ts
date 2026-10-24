@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) redirect("/login?error=Bitte%20E-Mail%20und%20Passwort%20eingeben.");
+  if (!email || !password) redirect("/login?error=missing");
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -19,12 +19,8 @@ export async function signIn(formData: FormData) {
         message: error.message,
       });
     }
-    const message = error?.message === "Invalid API key"
-      ? "Anmeldung momentan nicht möglich. Bitte die Supabase-Konfiguration prüfen."
-      : error?.code === "email_not_confirmed"
-        ? "Bitte bestätige zuerst deine E-Mail-Adresse."
-        : "Anmeldung nicht möglich. Bitte E-Mail und Passwort prüfen.";
-    redirect(`/login?error=${encodeURIComponent(message)}`);
+    const code = error?.message === "Invalid API key" ? "config" : error?.code === "email_not_confirmed" ? "unconfirmed" : "badCredentials";
+    redirect(`/login?error=${code}`);
   }
 
   const { isStaff, error: membershipError } = await checkStaffMembership(supabase, data.user.id);
@@ -34,12 +30,12 @@ export async function signIn(formData: FormData) {
       message: membershipError.message,
     });
     await supabase.auth.signOut();
-    redirect("/login?error=Teamzugang konnte nicht geprüft werden. Bitte die Dashboard-Konfiguration prüfen.");
+    redirect("/login?error=membership");
   }
 
   if (!isStaff) {
     await supabase.auth.signOut();
-    redirect("/login?error=Dieses%20Konto%20hat%20keinen%20Teamzugang.");
+    redirect("/login?error=noStaff");
   }
 
   redirect("/dashboard");
