@@ -5,13 +5,14 @@ import { X } from "lucide-react";
 import type { Reservation } from "@/lib/dashboard/mock-data";
 import { useTranslations } from "next-intl";
 
-export function Modal({ open, title, subtitle, children, onClose, footer }: {
+export function Modal({ open, title, subtitle, children, onClose, footer, variant = "dialog" }: {
   open: boolean;
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
   footer?: ReactNode;
+  variant?: "dialog" | "drawer" | "confirm";
 }) {
   const t = useTranslations("Common");
   useEffect(() => {
@@ -22,8 +23,8 @@ export function Modal({ open, title, subtitle, children, onClose, footer }: {
   }, [open, onClose]);
 
   if (!open) return null;
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  return <div className={`modal-backdrop modal-backdrop-${variant}`} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className={`modal-card modal-card-${variant}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <header className="modal-head"><div><h2 className="modal-title" id="modal-title">{title}</h2>{subtitle ? <p className="modal-subtitle">{subtitle}</p> : null}</div><button type="button" className="icon-button" aria-label={t("close")} onClick={onClose}><X size={16} /></button></header>
       <div className="modal-body">{children}</div>
       {footer ? <footer className="modal-foot">{footer}</footer> : null}

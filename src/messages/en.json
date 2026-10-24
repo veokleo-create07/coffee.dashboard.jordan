@@ -181,7 +181,8 @@
     "tableRequests": "Special requests",
     "mockData": "Sample data",
     "weekFrom": "Week of {date}",
-    "expectedGuests": "guests expected",
+    "expectedGuests": "Guests expected",
+    "currentlySeated": "Currently seated",
     "tableTime": "Time",
     "tableGuest": "Guest",
     "tablePeople": "Guests",
@@ -279,7 +280,12 @@
     "arrivalTimeUnavailable": "Arrival time was not recorded for this older visit",
     "visitTimerRemaining": "{time} remaining",
     "visitTimerOverdue": "Overdue by {time}",
-    "lateFlag": "Late"
+    "lateFlag": "Late",
+    "guestInformation": "Guest information",
+    "reservationInformation": "Reservation details",
+    "timeline": "Timeline",
+    "noTimeline": "No arrival or departure has been recorded yet.",
+    "actionsLabel": "Actions"
   },
   "Guests": {
     "eyebrow": "Guests who return",

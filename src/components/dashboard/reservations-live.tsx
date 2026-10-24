@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Search, UsersRound, Plus, LoaderCircle, Pencil, Phone, Check, UserRoundCheck, Ban, CircleCheck, UserX } from "lucide-react";
+import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, Globe2, LoaderCircle, Mail, MoreHorizontal, Pencil, Phone, Plus, Search, UserRound, UserRoundCheck, UsersRound, UserX } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
@@ -37,6 +37,40 @@ function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: n
     <Clock3 size={12} />
     {remaining < 0 ? t("visitTimerOverdue", { time: timerValue(remaining) }) : t("visitTimerRemaining", { time: timerValue(remaining) })}
   </span>;
+}
+
+function WeekSummary({ start, selected, reservations, locale }: { start: Date; selected: string; reservations: LiveReservation[]; locale: string }) {
+  const c = useTranslations("Common");
+  const days = Array.from({ length: 7 }, (_, index) => { const value = new Date(start); value.setDate(start.getDate() + index); return value; });
+  return <section className="week-summary" aria-label={c("bookings")}>
+    {days.map((day) => {
+      const dayKey = key(day); const count = reservations.filter((item) => item.date === dayKey).length; const active = dayKey === selected;
+      return <article className={`week-day-card${active ? " is-selected" : ""}`} key={dayKey}>
+        <span className="week-day-label">{new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", timeZone: "Europe/Berlin" }).format(day)}</span>
+        <strong>{count}</strong>
+        <span className="week-mini-bars" aria-hidden="true">{[.45, .72, 1, .68].map((height, index) => <i key={index} style={{ height: `${Math.max(7, Math.round((count + 5) * height))}px` }} />)}</span>
+        <span className="week-day-caption">{c("bookings")}</span>
+      </article>;
+    })}
+  </section>;
+}
+
+function MonthCalendar({ month, selected, reservations, locale }: { month: Date; selected: string; reservations: LiveReservation[]; locale: string }) {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const offset = (first.getDay() + 6) % 7;
+  const gridStart = new Date(first); gridStart.setDate(first.getDate() - offset);
+  const days = Array.from({ length: 42 }, (_, index) => { const value = new Date(gridStart); value.setDate(gridStart.getDate() + index); return value; });
+  const weekdays = Array.from({ length: 7 }, (_, index) => { const value = new Date(2026, 9, 19 + index); return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(value); });
+  return <section className="month-calendar" aria-label={new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month)}>
+    <div className="month-weekdays">{weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}</div>
+    <div className="month-grid">{days.map((day) => {
+      const dayKey = key(day); const items = reservations.filter((item) => item.date === dayKey); const outside = day.getMonth() !== month.getMonth();
+      const sources = Array.from(new Set(items.map((item) => item.source))).slice(0, 2);
+      return <article className={`month-day${outside ? " is-outside" : ""}${dayKey === selected ? " is-selected" : ""}`} key={dayKey}>
+        <strong>{day.getDate()}</strong><span className="month-source-dots" aria-hidden="true">{sources.map((source) => <i className={`source-${source}`} key={source} />)}</span>{!outside && items.length ? <span>{items.length}</span> : null}
+      </article>;
+    })}</div>
+  </section>;
 }
 
 export function ReservationsLive({ today, initialStart, initialEnd, initial }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult }) {
@@ -84,6 +118,8 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
   });
   const loading = (start < loadedRange.start || end > loadedRange.end) && result.ok;
   const expectedGuests = periodReservations.filter((item) => activeStatuses.has(item.status)).reduce((sum, item) => sum + item.guests, 0);
+  const occupiedGuests = periodReservations.filter((item) => item.status === "arrived" && !item.departedAt).reduce((sum, item) => sum + item.guests, 0);
+  const noShows = periodReservations.filter((item) => item.status === "no_show").length;
   const format = (value: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { ...options, timeZone: "Europe/Berlin" }).format(value);
   const title = range === "day" ? format(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : range === "week" ? `${format(bounds.start, { day: "numeric", month: "short" })} – ${format(bounds.end, { day: "numeric", month: "short", year: "numeric" })}` : format(date, { month: "long", year: "numeric" });
   const statusName = (value: ReservationStatus) => c(value === "no_show" ? "noShow" : value);
@@ -107,50 +143,48 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
   return <>
-    <PageIntro eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-    <section className="metric-grid reservations-metrics" aria-label={t("periodLabel")}>
-      <MetricCard label={t("count")} value={result.ok ? periodReservations.length : "—"} detail={title} icon={<CalendarDays size={15} />} />
-      <MetricCard label={t("expectedGuests")} value={result.ok ? expectedGuests : "—"} detail={t("activeBookingsOnly")} icon={<UsersRound size={15} />} tone="sage" />
-      <MetricCard label={c("pending")} value={result.ok ? periodReservations.filter((item) => item.status === "pending").length : "—"} detail={t("liveDataLabel")} icon={<Clock3 size={15} />} tone="gold" />
-      <MetricCard label={c("cancelled")} value={result.ok ? periodReservations.filter((item) => item.status === "cancelled").length : "—"} detail={t("liveDataLabel")} icon={<CalendarDays size={15} />} tone="stone" />
-    </section>
+    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previous")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("next")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
+    {range === "day" ? <section className="metric-grid reservations-metrics" aria-label={t("periodLabel")}>
+      <MetricCard label={t("count")} value={result.ok ? periodReservations.length : "—"} detail={t("liveDataLabel")} icon={<CalendarDays size={18} />} />
+      <MetricCard label={t("expectedGuests")} value={result.ok ? expectedGuests : "—"} detail={t("activeBookingsOnly")} icon={<UsersRound size={18} />} tone="sage" />
+      <MetricCard label={t("currentlySeated")} value={result.ok ? occupiedGuests : "—"} detail={t("liveDataLabel")} icon={<UserRoundCheck size={18} />} tone="sage" />
+      <MetricCard label={t("noShows")} value={result.ok ? noShows : "—"} detail={t("periodNoShow")} icon={<UserX size={18} />} tone="stone" />
+    </section> : null}
 
-    <div className="reservation-toolbar"><div className="toolbar-upper">
-      <div className="range-switcher" aria-label={t("periodLabel")}>{(["day", "week", "month"] as const).map((item) => <button type="button" key={item} className={`range-button${range === item ? " is-active" : ""}`} onClick={() => setRange(item)}>{t(item)}</button>)}</div>
-      <div className="date-controls"><button className="icon-button" aria-label={t("previous")} onClick={() => step(-1)}><ChevronLeft size={15} /></button><span className="range-date">{title}</span><button className="icon-button" aria-label={t("next")} onClick={() => step(1)}><ChevronRight size={15} /></button><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button></div>
-      <button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={14} />{c("newReservation")}</button>
-    </div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    <div className="reservation-toolbar"><div className="toolbar-upper"><div className="range-switcher" aria-label={t("periodLabel")}>{(["day", "week", "month"] as const).map((item) => <button type="button" key={item} className={`range-button${range === item ? " is-active" : ""}`} onClick={() => setRange(item)}>{t(item)}</button>)}</div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button></div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
+    {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={key(date)} reservations={shown} locale={locale} /> : null}
+    {range === "month" && result.ok ? <MonthCalendar month={date} selected={key(date)} reservations={shown} locale={locale} /> : null}
     <div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
     {result.ok && !loading && !shown.length ? <div className="empty-search">{query || status !== "all" ? t("noResults") : t("noReservations")}</div> : null}
-    {result.ok && shown.length ? <>
-      <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableReference")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th></tr></thead><tbody>
-        {shown.map((item) => <tr key={item.id}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="source-tag">{item.reference}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td></tr>)}
+    {range !== "month" && result.ok && shown.length ? <>
+      <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th><th>{t("tableActions")}</th></tr></thead><tbody>
+        {shown.map((item) => <tr key={item.id} className={details?.id === item.id ? "is-selected" : undefined}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td><td><button className="table-action-button" aria-label={t("detailsAction", { guest: item.guest })} onClick={() => { setDetails(item); setError(""); }}><MoreHorizontal size={17} /></button></td></tr>)}
       </tbody></table></div>
       <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span><span className="reservation-card-badges"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</span></div><VisitTimer reservation={item} now={now} /><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
     </> : null}
 
-    <Modal open={Boolean(details) && !editing} title={t("detailTitle")} subtitle={details?.reference} onClose={() => { setDetails(null); setError(""); }} footer={<button className="button-secondary" onClick={() => setDetails(null)}>{c("close")}</button>}>
-      {details ? <div className="detail-stack"><div className="detail-name"><div><strong>{details.guest}</strong><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div></div><div className="detail-line"><CalendarDays size={15} />{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {details.time}</div>{details.email ? <div className="detail-line">{details.email}</div> : null}{details.phone ? <div className="detail-line"><Phone size={14} />{details.phone}</div> : null}<div className="detail-line"><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span><span>{t("sourcePrefix")} {sourceLabel(details.source)}</span>{isLate(details, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</div>
-        {details.arrivedAt ? <div className="detail-line"><UserRoundCheck size={14} />{t("actualArrival")}: {timestampLabel(details.arrivedAt)}</div> : details.status === "arrived" ? <div className="detail-line"><UserRoundCheck size={14} />{t("arrivalTimeUnavailable")}</div> : null}
-        {details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}
-        {details.departedAt ? <div className="detail-line"><CircleCheck size={14} />{t("actualDeparture")}: {timestampLabel(details.departedAt)}</div> : null}
-        <div className="detail-line"><strong>{t("tableRequests")}</strong></div>{details.note ? <div className="profile-note">{details.note}</div> : <div className="detail-muted">{c("noRequests")}</div>}
-        {error ? <p className="form-error" role="alert">{error}</p> : null}<div className="reservation-management-actions">
+    <Modal open={Boolean(details) && !editing} variant="drawer" title={t("detailTitle")} subtitle={details?.reference} onClose={() => { setDetails(null); setError(""); }}>
+      {details ? <div className="detail-stack"><div className="detail-hero"><div><h3>{details.guest}</h3><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span></div>{isLate(details, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</div>
+        <div className="detail-summary-grid"><div><CalendarDays size={18} /><span>{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span></div><div><Clock3 size={18} /><span>{details.time}</span></div><div><UsersRound size={18} /><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div></div>
+        <section className="detail-section"><h4><UserRound size={14} />{t("guestInformation")}</h4><div className="detail-information-card"><div><UserRound size={15} /><span>{c("name")}</span><strong>{details.guest}</strong></div>{details.phone ? <div><Phone size={15} /><span>{c("phone")}</span><a href={`tel:${details.phone.replaceAll(" ", "")}`}>{details.phone}</a></div> : null}{details.email ? <div><Mail size={15} /><span>{c("email")}</span><a href={`mailto:${details.email}`}>{details.email}</a></div> : null}</div></section>
+        <section className="detail-section"><h4><CalendarDays size={14} />{t("reservationInformation")}</h4><div className="detail-information-card"><div><Globe2 size={15} /><span>{c("source")}</span><strong>{sourceLabel(details.source)}</strong></div><div><MoreHorizontal size={15} /><span>{t("tableReference")}</span><strong>{details.reference}</strong></div><div><Pencil size={15} /><span>{t("tableRequests")}</span><strong>{details.note || c("noRequests")}</strong></div></div></section>
+        <section className="detail-section"><h4><Clock3 size={14} />{t("timeline")}</h4><div className="detail-timeline">{details.arrivedAt ? <div><i /><span>{timestampLabel(details.arrivedAt)}</span><strong>{t("actualArrival")}</strong></div> : details.status === "arrived" ? <div><i /><span>—</span><strong>{t("arrivalTimeUnavailable")}</strong></div> : <p className="detail-muted">{t("noTimeline")}</p>}{details.departedAt ? <div><i /><span>{timestampLabel(details.departedAt)}</span><strong>{t("actualDeparture")}</strong></div> : null}{details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}</div></section>
+        {error ? <p className="form-error" role="alert">{error}</p> : null}<section className="detail-section detail-actions-section"><h4><CircleCheck size={14} />{t("actionsLabel")}</h4><div className="reservation-management-actions">
           {details.status === "pending" ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("confirmed")}><Check size={14} />{t("actions.confirmed")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}
           {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}
-        </div>{pending ? <span className="detail-muted"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</div> : null}
+        </div></section>{pending ? <span className="detail-muted"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</div> : null}
     </Modal>
     {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} onCheck={checkReservationAvailability} errorFor={translatedError} /> : null}
-    <Modal open={confirmCancel} title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
+    <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
     </Modal>
     <Toast message={message} onDismiss={() => setMessage("")} />
@@ -180,8 +214,9 @@ function ReservationEditor({ mode, initial, today, error, busy, onClose, onSubmi
     onSubmit({ action: mode, id: initial?.id, guest: mode === "create" ? guest : undefined, email: mode === "create" ? email : undefined, phone: mode === "create" ? phone : undefined, date, time, guests, source: mode === "create" ? source : undefined, note, exceptionReason: override ? reason : undefined });
   }
   return <Modal open title={mode === "create" ? t("createTitle") : t("editTitle")} subtitle={mode === "create" ? t("createSubtitle") : initial?.reference} onClose={onClose} footer={<><button className="button-secondary" disabled={busy} onClick={onClose}>{c("cancel")}</button><button className="button-primary" disabled={busy || checking} onClick={save}>{busy ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : mode === "create" ? t("actions.create") : t("saveChanges")}</button></>}>
+    {mode === "create" ? <div className="source-segmented" role="group" aria-label={t("bookingSource")}><button type="button" className={source === "phone" ? "is-active" : ""} onClick={() => { setSource("phone"); setAvailability(null); }}><Phone size={14} />{c("telephone")}</button><button type="button" className={source === "walk_in" ? "is-active" : ""} onClick={() => { setSource("walk_in"); setAvailability(null); }}><UsersRound size={14} />{c("walkIn")}</button></div> : null}
     <div className="form-grid">
-      {mode === "create" ? <><div className="form-field is-full"><label htmlFor="staffGuest">{c("name")} *</label><input id="staffGuest" autoComplete="name" value={guest} onChange={(e) => setGuest(e.target.value)} maxLength={160} /></div><div className="form-field"><label htmlFor="staffEmail">{c("email")}</label><input id="staffEmail" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={320} /></div><div className="form-field"><label htmlFor="staffPhone">{c("phone")}</label><input id="staffPhone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} /></div><div className="form-field is-full"><label htmlFor="staffSource">{t("bookingSource")}</label><select id="staffSource" value={source} onChange={(e) => { setSource(e.target.value as "phone" | "walk_in"); setAvailability(null); }}><option value="phone">{c("telephone")}</option><option value="walk_in">{c("walkIn")}</option></select></div></> : null}
+      {mode === "create" ? <><div className="form-field"><label htmlFor="staffGuest">{c("name")} *</label><input id="staffGuest" autoComplete="name" value={guest} onChange={(e) => setGuest(e.target.value)} maxLength={160} /></div><div className="form-field"><label htmlFor="staffPhone">{c("phone")}</label><input id="staffPhone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} /></div><div className="form-field is-full"><label htmlFor="staffEmail">{c("email")}</label><input id="staffEmail" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={320} /></div></> : null}
       <div className="form-field"><label htmlFor="staffDate">{c("date")}</label><input id="staffDate" type="date" value={date} onChange={(e) => { setDate(e.target.value); setAvailability(null); }} /></div><div className="form-field"><label htmlFor="staffTime">{c("time")}</label><input id="staffTime" type="time" value={time} onChange={(e) => { setTime(e.target.value); setAvailability(null); }} /></div><div className="form-field"><label htmlFor="staffGuests">{c("guests")}</label><select id="staffGuests" value={guests} onChange={(e) => { setGuests(Number(e.target.value)); setAvailability(null); }}>{Array.from({ length: 26 }, (_, i) => i + 1).map((number) => <option key={number} value={number}>{number}</option>)}</select></div><div className="form-field is-full"><label htmlFor="staffNote">{c("note")}</label><textarea id="staffNote" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder={c("requestPlaceholder")} /></div>
     </div>
     <div className="availability-check"><button type="button" className="button-secondary" disabled={checking || busy} onClick={checkAvailability}>{checking ? <><LoaderCircle size={14} className="spin" />{t("checking")}</> : <><Clock3 size={14} />{t("checkAvailability")}</>}</button>{availability?.ok ? <p className={availability.available ? "availability-success" : "availability-error"} role="status">{availability.available ? t("availableFor", { duration: availability.duration }) : labelError}</p> : null}{availability && !availability.ok ? <p className="availability-error" role="alert">{errorFor(availability.code)}</p> : null}</div>

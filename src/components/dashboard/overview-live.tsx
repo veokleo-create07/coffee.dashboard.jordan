@@ -54,7 +54,7 @@ export function OverviewLive({ today, initial, initialOccupancy }: { today: stri
   const occupancyError = !occupancy.ok ? occupancy.reason === "unauthorized" ? c("reservationUnauthorized") : occupancy.reason === "permission" ? c("reservationPermission") : c("occupancyLoadError") : "";
 
   return <>
-    <PageIntro eyebrow={dateLabel(today)} title={t("title")} description={t("description")} />
+    <PageIntro eyebrow="" title={t("title")} description={dateLabel(today)} />
     {!reservationsResult.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {occupancyError ? <div className="live-data-alert occupancy-alert" role="alert">{occupancyError}</div> : null}
     <section className="metric-grid" aria-label={t("metrics")}>

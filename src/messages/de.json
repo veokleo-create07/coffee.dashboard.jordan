@@ -182,6 +182,7 @@
     "mockData": "Mock-Daten",
     "weekFrom": "Woche vom {date}",
     "expectedGuests": "Gäste erwartet",
+    "currentlySeated": "Aktuell im Café",
     "tableTime": "Zeit",
     "tableGuest": "Gast",
     "tablePeople": "Personen",
@@ -279,7 +280,12 @@
     "arrivalTimeUnavailable": "Für diesen älteren Besuch wurde keine Ankunftszeit erfasst",
     "visitTimerRemaining": "Noch {time}",
     "visitTimerOverdue": "Überzogen um {time}",
-    "lateFlag": "Verspätet"
+    "lateFlag": "Verspätet",
+    "guestInformation": "Gastinformationen",
+    "reservationInformation": "Reservierungsdetails",
+    "timeline": "Verlauf",
+    "noTimeline": "Noch keine Ankunft oder Abreise erfasst.",
+    "actionsLabel": "Aktionen"
   },
   "Guests": {
     "eyebrow": "Menschen, die wiederkommen",

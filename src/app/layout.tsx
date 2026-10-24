@@ -5,6 +5,7 @@ import de from "@/messages/de.json";
 import en from "@/messages/en.json";
 import "@fontsource-variable/bricolage-grotesque";
 import "./globals.css";
+import "./dashboard-reference.css";
 
 export const metadata: Metadata = {
   title: { default: "Altstadtliebe · Team", template: "%s · Altstadtliebe" },

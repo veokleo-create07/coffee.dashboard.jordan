@@ -27,7 +27,7 @@ export default function GuestsPage() {
   const guests = useMemo(() => mockGuests.filter((guest) => `${guest.name} ${guest.email} ${guest.phone}`.toLowerCase().includes(query.toLowerCase().trim())), [query]);
 
   return <>
-    <PageIntro eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+    <PageIntro eyebrow="" title={t("title")} description={t("description")} />
     <div className="guests-toolbar"><label className="search-field"><Search size={14} /><input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="result-count">{t("visitsResult", {count: new Intl.NumberFormat(locale).format(guests.length)})}</span></div>
     <section className="guests-layout">
       <article className="panel guest-list-panel">

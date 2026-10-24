@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Heart, LayoutDashboard, UsersRound, UtensilsCrossed } from "lucide-react";
+import { BarChart3, Heart, LayoutDashboard, LogOut, UsersRound, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
+import { signOut } from "@/app/dashboard/actions";
 
 function Brand() {
   const t = useTranslations("Navigation");
   return <Link href="/dashboard" className="brand-lockup group" aria-label={t("brandLabel")}>
     <Heart className="brand-heart" size={12} strokeWidth={1.8} fill="currentColor" />
     <span className="brand-wordmark">Altstadtliebe</span>
-    <span className="brand-team">{t("team")}</span>
+    <span className="brand-team">breakfast &amp; lunch</span>
   </Link>;
 }
 
@@ -27,8 +28,6 @@ export function DashboardNavigation({ email }: { email?: string | null }) {
   return <>
     <aside className="dashboard-sidebar hidden md:flex">
       <Brand />
-      <p className="nav-eyebrow">{t("workspace")}</p>
-      <LanguageSwitcher />
       <nav className="nav-links" aria-label={t("workspace")}>
         {links.map(({ label, href, icon: Icon }) => {
           const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
@@ -38,12 +37,11 @@ export function DashboardNavigation({ email }: { email?: string | null }) {
         })}
       </nav>
       <div className="sidebar-bottom">
-        <span className="open-indicator"><i /> {t("open")}</span>
-        <p className="sidebar-location">{t("location")}</p>
-        {email ? <p className="sidebar-email" title={email}>{email}</p> : null}
+        <div className="sidebar-account-controls"><LanguageSwitcher /><form action={signOut}><button aria-label={t("logout")} className="sidebar-logout"><LogOut size={14} /><span>{t("logout")}</span></button></form></div>
+        <span className="open-indicator"><i /> {t("open")}</span>{email ? <p className="sidebar-email" title={email}>{email}</p> : null}
       </div>
     </aside>
-    <div className="mobile-brand md:hidden"><Brand /><LanguageSwitcher /></div>
+    <div className="mobile-brand md:hidden"><Brand /><div className="mobile-account-controls"><LanguageSwitcher /><form action={signOut}><button aria-label={t("logout")} className="mobile-logout"><LogOut size={16} /></button></form></div></div>
     <nav className="mobile-navigation md:hidden" aria-label={t("workspace")}>
       {links.map(({ label, href, icon: Icon }) => {
         const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
