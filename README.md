@@ -9,7 +9,7 @@ Private staff dashboard foundation for Altstadtliebe Café in Lübeck. This app 
 3. Copy `.env.example` to `.env.local` and add the existing project's Supabase project URL and anon/publishable key.
 4. Run `npm run dev` and open `http://localhost:3000`.
 
-The required values are `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. The anon key is intended for browser use; database access must be governed by Supabase RLS. Do not add a service-role key to this application.
+The required server-only values are `SUPABASE_URL` and `SUPABASE_ANON_KEY`. They are not prefixed with `NEXT_PUBLIC_`, and the app does not create a browser Supabase client. Never add a service-role key to this application. Database access must be governed by Supabase RLS.
 
 ## Staff access
 
