@@ -106,7 +106,7 @@
     "reservations": "Reservierungen heute",
     "expected": "Erwartete Gäste",
     "seated": "Gerade am Tisch",
-    "capacity": "Kapazität verfügbar",
+    "capacity": "Aktuell freie Plätze",
     "todayList": "Reservierungen heute",
     "upcoming": "Demnächst",
     "upcomingDetail": "Die nächsten Buchungen",
@@ -121,7 +121,7 @@
     "emptyNote": "Guten Start in den Tag. Deine Zahlen hier sind Beispieldaten und werden noch nicht gespeichert.",
     "expectedDetail": "in {count} Reservierungen",
     "seatedDetail": "von 26 Plätzen",
-    "capacityDetail": "Plätze aktuell frei · 26 gesamt",
+    "capacityDetail": "Physisch freie Plätze · insgesamt 26",
     "tableTime": "Uhrzeit",
     "tableGuest": "Gast",
     "tablePeople": "Personen",
@@ -135,7 +135,10 @@
     "pendingDetail": "Wartet auf Bestätigung",
     "tableReference": "Buchungsnummer",
     "noTodayReservations": "Für heute liegen keine Reservierungen vor.",
-    "noUpcomingReservations": "Es gibt keine anstehenden Reservierungen."
+    "noUpcomingReservations": "Es gibt keine anstehenden Reservierungen.",
+    "occupancyLiveDetail": "Gäste aktuell eingecheckt",
+    "occupancyLoadError": "Die aktuelle Auslastung konnte nicht geladen werden. Bitte erneut versuchen.",
+    "lateFlag": "Verspätet"
   },
   "Reservations": {
     "eyebrow": "Tisch für Tisch",
@@ -234,14 +237,15 @@
       "noShow": "Als nicht erschienen markieren",
       "cancel": "Reservierung stornieren",
       "create": "Reservierung erstellen",
-      "confirmed": "Reservierung bestätigen"
+      "confirmed": "Reservierung bestätigen",
+      "free": "Als frei markieren"
     },
     "success": {
       "create": "Reservierung erstellt.",
       "edit": "Reservierung aktualisiert.",
       "confirmed": "Reservierung bestätigt.",
       "arrived": "Ankunft erfasst.",
-      "completed": "Reservierung abgeschlossen.",
+      "completed": "Besuch als beendet erfasst.",
       "cancelled": "Reservierung storniert; Kapazität freigegeben.",
       "no_show": "Nichterscheinen erfasst."
     },
@@ -259,15 +263,23 @@
       "exceptionForbidden": "Sie sind nicht berechtigt, diese Ausnahme vorzunehmen.",
       "notFound": "Diese Reservierung wurde nicht gefunden.",
       "invalidTransition": "Diese Statusänderung ist nicht zulässig.",
-      "noShowTooEarly": "Nichterscheinen kann erst nach dem Reservierungszeitpunkt erfasst werden.",
+      "noShowTooEarly": "Nichterscheinen kann erst 15 Minuten nach der Reservierungszeit erfasst werden.",
       "notStaff": "Ihr Mitarbeiterzugang konnte nicht bestätigt werden. Bitte melden Sie sich erneut an.",
       "unavailable": "Die Reservierung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "nameRequired": "Bitte geben Sie den Namen des Gastes ein.",
       "contactRequired": "Bitte geben Sie eine E-Mail-Adresse oder Telefonnummer ein.",
       "checkFirst": "Prüfen Sie vor dem Speichern die Verfügbarkeit.",
       "reasonRequired": "Geben Sie eine Ausnahmebegründung mit mindestens 10 Zeichen ein.",
-      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein."
-    }
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "visitStillActive": "Markiere den Gast zuerst als gegangen, bevor du die Reservierung schließt.",
+      "occupancyTimestampForbidden": "Ankunfts- und Abschiedszeiten werden automatisch erfasst und können nicht direkt bearbeitet werden."
+    },
+    "actualArrival": "Tatsächliche Ankunft",
+    "actualDeparture": "Tatsächlicher Abschied",
+    "arrivalTimeUnavailable": "Für diesen älteren Besuch wurde keine Ankunftszeit erfasst",
+    "visitTimerRemaining": "Noch {time}",
+    "visitTimerOverdue": "Überzogen um {time}",
+    "lateFlag": "Verspätet"
   },
   "Guests": {
     "eyebrow": "Menschen, die wiederkommen",

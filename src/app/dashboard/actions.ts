@@ -10,13 +10,17 @@ export type ReservationStatus = "pending" | "confirmed" | "arrived" | "completed
 export type BookingSource = "website" | "phone" | "walk_in";
 export type LiveReservation = {
   id: string; reference: string; guest: string; email: string | null; phone: string | null;
-  date: string; time: string; guests: number; status: ReservationStatus; source: BookingSource; note: string | null;
+  date: string; time: string; startsAt: string; arrivedAt: string | null; departedAt: string | null;
+  guests: number; status: ReservationStatus; source: BookingSource; note: string | null;
 };
 export type ReservationLoadResult =
   | { ok: true; reservations: LiveReservation[] }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type ReservationActionResult = { ok: true; reservation?: LiveReservation } | { ok: false; code: string };
 export type AvailabilityResult = { ok: true; available: boolean; reason: string; canOverride: boolean; duration: number } | { ok: false; code: string };
+export type OccupancyResult =
+  | { ok: true; guests: number; visits: Array<{ id: string; guests: number; arrivedAt: string | null }> }
+  | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type ReservationMutation = {
   action: "create" | "edit" | "status"; id?: string; guest?: string; email?: string; phone?: string;
   guests?: number; date?: string; time?: string; note?: string; source?: "phone" | "walk_in";
@@ -27,7 +31,7 @@ export type ReservationMutation = {
 type ReservationRow = {
   id: string; reservation_reference: string; customer_name: string; customer_email: string | null;
   customer_phone: string | null; booking_source: BookingSource; guest_count: number; starts_at: string;
-  special_requests: string | null; status: ReservationStatus;
+  arrived_at: string | null; departed_at: string | null; special_requests: string | null; status: ReservationStatus;
 };
 
 function berlinDateToday() {
@@ -58,6 +62,7 @@ function mapRow(row: ReservationRow): LiveReservation {
   return { id: row.id, reference: row.reservation_reference, guest: row.customer_name, email: row.customer_email,
     phone: row.customer_phone, source: row.booking_source, date: `${value("year")}-${value("month")}-${value("day")}`,
     time: new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(row.starts_at)),
+    startsAt: row.starts_at, arrivedAt: row.arrived_at, departedAt: row.departed_at,
     guests: row.guest_count, status: row.status, note: row.special_requests };
 }
 export async function loadReservations(startDate: string, endDate: string): Promise<ReservationLoadResult> {
@@ -67,7 +72,7 @@ export async function loadReservations(startDate: string, endDate: string): Prom
     const exclusive = new Date(`${endDate}T12:00:00Z`); exclusive.setUTCDate(exclusive.getUTCDate() + 1);
     const rows: ReservationRow[] = [];
     for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,special_requests,status")
+      const { data, error } = await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,arrived_at,departed_at,special_requests,status")
         .gte("starts_at", zonedMidnightUtc(startDate)).lt("starts_at", zonedMidnightUtc(exclusive.toISOString().slice(0, 10))).order("starts_at", { ascending: true }).range(offset, offset + 999);
       if (error) return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
       rows.push(...((data ?? []) as ReservationRow[])); if ((data?.length ?? 0) < 1000) break;
@@ -77,9 +82,29 @@ export async function loadReservations(startDate: string, endDate: string): Prom
 }
 export async function getOverviewReservations() {
   const today = berlinDateToday(); const end = new Date(`${today}T12:00:00Z`); end.setUTCDate(end.getUTCDate() + 6);
-  return { today, result: await loadReservations(today, end.toISOString().slice(0, 10)) };
+  const [result, occupancy] = await Promise.all([
+    loadReservations(today, end.toISOString().slice(0, 10)),
+    loadCurrentOccupancy(),
+  ]);
+  return { today, result, occupancy };
 }
-const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY"]);
+
+export async function loadCurrentOccupancy(): Promise<OccupancyResult> {
+  try {
+    const supabase = await verifiedStaff();
+    if (!supabase) return { ok: false, reason: "unauthorized" };
+    const { data, error } = await supabase.from("reservations")
+      .select("id,guest_count,arrived_at")
+      .eq("status", "arrived")
+      .is("departed_at", null);
+    if (error) return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+    const visits = (data ?? []).map((row) => ({ id: row.id, guests: row.guest_count, arrivedAt: row.arrived_at }));
+    return { ok: true, guests: visits.reduce((sum, visit) => sum + visit.guests, 0), visits };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY", "VISIT_STILL_ACTIVE", "OCCUPANCY_TIMESTAMP_FORBIDDEN"]);
 function getErrorCode(error: { message?: string; code?: string }) {
   const first = error.message?.split(":")[0]?.trim() ?? "";
   if (knownErrors.has(first)) return first;

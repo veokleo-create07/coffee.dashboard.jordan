@@ -15,14 +15,36 @@ const startOfWeek = (date: Date) => { const value = new Date(date); value.setDat
 const endOfWeek = (date: Date) => { const value = startOfWeek(date); value.setDate(value.getDate() + 6); return value; };
 const monthBounds = (date: Date) => ({ start: new Date(date.getFullYear(), date.getMonth(), 1), end: new Date(date.getFullYear(), date.getMonth() + 1, 0) });
 const activeStatuses = new Set<ReservationStatus>(["pending", "confirmed", "arrived"]);
-const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPACITY_CONFIG: "capacityConfig", PAST: "past", BOOKING_WINDOW: "bookingWindow", GUEST_LIMIT: "guestLimit", CLOSED: "closed", OUTSIDE_HOURS: "outsideHours", INVALID_SLOT: "invalidSlot", RESERVATION_FULL: "full", RULE_EXCEPTION_REQUIRED: "exceptionRequired", RULE_EXCEPTION_FORBIDDEN: "exceptionForbidden", NOT_FOUND: "notFound", INVALID_TRANSITION: "invalidTransition", NO_SHOW_TOO_EARLY: "noShowTooEarly", NOT_STAFF: "notStaff", UNAVAILABLE: "unavailable" };
+const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPACITY_CONFIG: "capacityConfig", PAST: "past", BOOKING_WINDOW: "bookingWindow", GUEST_LIMIT: "guestLimit", CLOSED: "closed", OUTSIDE_HOURS: "outsideHours", INVALID_SLOT: "invalidSlot", RESERVATION_FULL: "full", RULE_EXCEPTION_REQUIRED: "exceptionRequired", RULE_EXCEPTION_FORBIDDEN: "exceptionForbidden", NOT_FOUND: "notFound", INVALID_TRANSITION: "invalidTransition", NO_SHOW_TOO_EARLY: "noShowTooEarly", NOT_STAFF: "notStaff", UNAVAILABLE: "unavailable", VISIT_STILL_ACTIVE: "visitStillActive", OCCUPANCY_TIMESTAMP_FORBIDDEN: "occupancyTimestampForbidden" };
+const lateThresholdMs = 15 * 60_000;
+const visitDurationMs = 90 * 60_000;
+function isLate(reservation: LiveReservation, now: number) {
+  const scheduled = Date.parse(reservation.startsAt);
+  if (reservation.arrivedAt) return Date.parse(reservation.arrivedAt) > scheduled + lateThresholdMs;
+  return (reservation.status === "pending" || reservation.status === "confirmed") && now > scheduled + lateThresholdMs;
+}
+function timerValue(milliseconds: number) {
+  const seconds = Math.floor(Math.abs(milliseconds) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: number }) {
+  const t = useTranslations("Reservations");
+  if (reservation.status !== "arrived") return null;
+  if (!reservation.arrivedAt) return <span className="visit-timer timer-unavailable">{t("arrivalTimeUnavailable")}</span>;
+  const remaining = Date.parse(reservation.arrivedAt) + visitDurationMs - now;
+  return <span className={`visit-timer${remaining < 0 ? " is-overdue" : ""}`}>
+    <Clock3 size={12} />
+    {remaining < 0 ? t("visitTimerOverdue", { time: timerValue(remaining) }) : t("visitTimerRemaining", { time: timerValue(remaining) })}
+  </span>;
+}
 
 export function ReservationsLive({ today, initialStart, initialEnd, initial }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${today}T12:00:00`)); const [range, setRange] = useState<Range>("day"); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd });
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false);
-  const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
   const start = key(bounds.start); const end = key(bounds.end);
 
@@ -37,6 +59,22 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
     void loadReservations(start, end).then((next) => { if (!active) return; setResult(next); if (next.ok) { setReservations(next.reservations); setLoadedRange({ start, end }); } });
     return () => { active = false; };
   }, [end, loadedRange.end, loadedRange.start, start]);
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      const next = await loadReservations(start, end);
+      if (!active) return;
+      setResult(next);
+      if (next.ok) {
+        setReservations(next.reservations);
+        setLoadedRange({ start, end });
+        setDetails((current) => current ? next.reservations.find((item) => item.id === current.id) ?? null : null);
+      }
+    };
+    const interval = window.setInterval(() => { void poll(); }, 15_000);
+    const clock = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); };
+  }, [end, start]);
 
   const periodReservations = reservations.filter((item) => item.date >= start && item.date <= end);
   const shown = periodReservations.filter((item) => {
@@ -51,6 +89,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
   const statusName = (value: ReservationStatus) => c(value === "no_show" ? "noShow" : value);
   const errorText = !result.ok ? result.reason === "unauthorized" ? c("reservationUnauthorized") : result.reason === "permission" ? c("reservationPermission") : c("reservationLoadError") : "";
   const translatedError = (code: string) => t(`errors.${errorKeys[code] ?? "unavailable"}`);
+  const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
   function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); if (range === "month") next.setMonth(next.getMonth() + direction); else next.setDate(next.getDate() + direction * (range === "week" ? 7 : 1)); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0]) {
     setError(""); startTransition(async () => {
@@ -90,19 +129,24 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial }: {
     {result.ok && !loading && !shown.length ? <div className="empty-search">{query || status !== "all" ? t("noResults") : t("noReservations")}</div> : null}
     {result.ok && shown.length ? <>
       <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableReference")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th></tr></thead><tbody>
-        {shown.map((item) => <tr key={item.id}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="source-tag">{item.reference}</td><td><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td></tr>)}
+        {shown.map((item) => <tr key={item.id}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="source-tag">{item.reference}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td></tr>)}
       </tbody></table></div>
-      <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span></div><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
+      <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span><span className="reservation-card-badges"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</span></div><VisitTimer reservation={item} now={now} /><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
     </> : null}
 
     <Modal open={Boolean(details) && !editing} title={t("detailTitle")} subtitle={details?.reference} onClose={() => { setDetails(null); setError(""); }} footer={<button className="button-secondary" onClick={() => setDetails(null)}>{c("close")}</button>}>
-      {details ? <div className="detail-stack"><div className="detail-name"><div><strong>{details.guest}</strong><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div></div><div className="detail-line"><CalendarDays size={15} />{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {details.time}</div>{details.email ? <div className="detail-line">{details.email}</div> : null}{details.phone ? <div className="detail-line"><Phone size={14} />{details.phone}</div> : null}<div className="detail-line"><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span><span>{t("sourcePrefix")} {sourceLabel(details.source)}</span></div><div className="detail-line"><strong>{t("tableRequests")}</strong></div>{details.note ? <div className="profile-note">{details.note}</div> : <div className="detail-muted">{c("noRequests")}</div>}
+      {details ? <div className="detail-stack"><div className="detail-name"><div><strong>{details.guest}</strong><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div></div><div className="detail-line"><CalendarDays size={15} />{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {details.time}</div>{details.email ? <div className="detail-line">{details.email}</div> : null}{details.phone ? <div className="detail-line"><Phone size={14} />{details.phone}</div> : null}<div className="detail-line"><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span><span>{t("sourcePrefix")} {sourceLabel(details.source)}</span>{isLate(details, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</div>
+        {details.arrivedAt ? <div className="detail-line"><UserRoundCheck size={14} />{t("actualArrival")}: {timestampLabel(details.arrivedAt)}</div> : details.status === "arrived" ? <div className="detail-line"><UserRoundCheck size={14} />{t("arrivalTimeUnavailable")}</div> : null}
+        {details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}
+        {details.departedAt ? <div className="detail-line"><CircleCheck size={14} />{t("actualDeparture")}: {timestampLabel(details.departedAt)}</div> : null}
+        <div className="detail-line"><strong>{t("tableRequests")}</strong></div>{details.note ? <div className="profile-note">{details.note}</div> : <div className="detail-muted">{c("noRequests")}</div>}
         {error ? <p className="form-error" role="alert">{error}</p> : null}<div className="reservation-management-actions">
           {details.status === "pending" ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("confirmed")}><Check size={14} />{t("actions.confirmed")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
           {(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}
-          {(details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.completed")}</button> : null}
-          {(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <><button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button><button className="button-secondary danger-action" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button></> : null}
+          {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
+          {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
+          {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}
         </div>{pending ? <span className="detail-muted"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</div> : null}
     </Modal>
     {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} onCheck={checkReservationAvailability} errorFor={translatedError} /> : null}

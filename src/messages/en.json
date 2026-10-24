@@ -106,7 +106,7 @@
     "reservations": "Today’s reservations",
     "expected": "Expected guests",
     "seated": "Currently seated",
-    "capacity": "Available capacity",
+    "capacity": "Seats free now",
     "todayList": "Today’s reservations",
     "upcoming": "Coming up",
     "upcomingDetail": "The next bookings",
@@ -121,7 +121,7 @@
     "emptyNote": "Have a lovely start to the day. These figures are sample data and are not saved yet.",
     "expectedDetail": "in {count} reservations",
     "seatedDetail": "of 26 seats",
-    "capacityDetail": "seats free now · 26 total",
+    "capacityDetail": "Physical seats available · 26 total",
     "tableTime": "Time",
     "tableGuest": "Guest",
     "tablePeople": "Guests",
@@ -135,7 +135,10 @@
     "pendingDetail": "Awaiting confirmation",
     "tableReference": "Booking reference",
     "noTodayReservations": "There are no reservations for today.",
-    "noUpcomingReservations": "There are no upcoming reservations."
+    "noUpcomingReservations": "There are no upcoming reservations.",
+    "occupancyLiveDetail": "Guests currently checked in",
+    "occupancyLoadError": "Live occupancy could not be loaded. Please try again.",
+    "lateFlag": "Late"
   },
   "Reservations": {
     "eyebrow": "Table by table",
@@ -234,14 +237,15 @@
       "noShow": "Mark no-show",
       "cancel": "Cancel reservation",
       "create": "Create reservation",
-      "confirmed": "Confirm reservation"
+      "confirmed": "Confirm reservation",
+      "free": "Mark as free"
     },
     "success": {
       "create": "Reservation created.",
       "edit": "Reservation updated.",
       "confirmed": "Reservation confirmed.",
       "arrived": "Arrival recorded.",
-      "completed": "Reservation completed.",
+      "completed": "Visit marked as free.",
       "cancelled": "Reservation cancelled; capacity released.",
       "no_show": "No-show recorded."
     },
@@ -259,15 +263,23 @@
       "exceptionForbidden": "You are not authorized to make this exception.",
       "notFound": "This reservation could not be found.",
       "invalidTransition": "This status change is not allowed.",
-      "noShowTooEarly": "A no-show can only be recorded after the booking time.",
+      "noShowTooEarly": "A no-show can only be recorded 15 minutes after the booking time.",
       "notStaff": "Your staff access could not be verified. Sign in again.",
       "unavailable": "The reservation could not be saved. Please try again.",
       "nameRequired": "Enter the guest name.",
       "contactRequired": "Enter an email address or phone number.",
       "checkFirst": "Check availability before saving.",
       "reasonRequired": "Enter an exception reason of at least 10 characters.",
-      "emailInvalid": "Enter a valid email address."
-    }
+      "emailInvalid": "Enter a valid email address.",
+      "visitStillActive": "Mark the guest as free before closing this reservation.",
+      "occupancyTimestampForbidden": "Arrival and departure times are recorded automatically. Do not edit them directly."
+    },
+    "actualArrival": "Actual arrival",
+    "actualDeparture": "Actual departure",
+    "arrivalTimeUnavailable": "Arrival time was not recorded for this older visit",
+    "visitTimerRemaining": "{time} remaining",
+    "visitTimerOverdue": "Overdue by {time}",
+    "lateFlag": "Late"
   },
   "Guests": {
     "eyebrow": "Guests who return",

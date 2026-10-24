@@ -619,3 +619,23 @@ body { background: #f4f0e8; letter-spacing: -.01em; }
 @keyframes reservation-spin { to { transform: rotate(360deg); } }
 @media (max-width: 900px) { .toolbar-upper { flex-wrap: wrap; } .new-booking-button { margin-left: auto; } }
 @media (max-width: 600px) { .new-booking-button { min-height: 36px; } .reservation-management-actions { display: grid; grid-template-columns: 1fr 1fr; } .reservation-management-actions button { justify-content: center; } .availability-check { align-items: flex-start; flex-direction: column; } }
+
+/* Live check-in, visit timer, and physical occupancy */
+.status-detail-cell { min-width: 128px; }
+.status-detail-cell .status-pill { margin-bottom: 4px; }
+.visit-timer { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; color: #77614b; font-size: 10px; font-variant-numeric: tabular-nums; line-height: 1.35; }
+.visit-timer svg { flex: 0 0 auto; }
+.visit-timer.is-overdue { color: #a25f52; }
+.visit-timer.timer-unavailable { color: #91877b; }
+.late-pill { display: inline-flex; width: fit-content; align-items: center; margin: 4px 0 0 4px; border-radius: 999px; background: #f6e9e3; padding: 3px 6px; color: #985b4d; font-size: 8px; font-weight: 600; letter-spacing: .02em; vertical-align: middle; }
+.reservation-card-badges { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+.reservation-card-badges .late-pill { margin: 0; }
+.reservation-card > .visit-timer { margin: -4px 0 10px; }
+.occupancy-alert { margin-bottom: 12px; }
+.action-free { color: #66775d; }
+@media (max-width: 700px) {
+  .status-detail-cell { min-width: 0; }
+  .status-detail-cell .visit-timer { max-width: 112px; white-space: normal; }
+  .reservation-card-top { align-items: flex-start; }
+  .reservation-card-badges { max-width: 62%; }
+}
