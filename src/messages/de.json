@@ -293,7 +293,8 @@
     "reservationInformation": "Reservierungsdetails",
     "timeline": "Verlauf",
     "noTimeline": "Noch keine Ankunft oder Abreise erfasst.",
-    "actionsLabel": "Aktionen"
+    "actionsLabel": "Aktionen",
+    "detailPanelTitle": "Reservierung"
   },
   "Analytics": {
     "eyebrow": "Ein Gefühl für den Rhythmus",

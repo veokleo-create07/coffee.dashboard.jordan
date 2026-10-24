@@ -293,7 +293,8 @@
     "reservationInformation": "Reservation details",
     "timeline": "Timeline",
     "noTimeline": "No arrival or departure has been recorded yet.",
-    "actionsLabel": "Actions"
+    "actionsLabel": "Actions",
+    "detailPanelTitle": "Reservation"
   },
   "Analytics": {
     "eyebrow": "Finding the rhythm",

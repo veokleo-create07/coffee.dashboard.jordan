@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, UserRoundCheck, UsersRound, UserX } from "lucide-react";
+import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
@@ -116,7 +116,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
-    <div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
+    <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
     {result.ok && !loading && !shown.length ? <div className="empty-search">{query || status !== "all" ? t("noResults") : t("noReservations")}</div> : null}
@@ -125,29 +125,41 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         {shown.map((item) => <tr key={item.id} className={details?.id === item.id ? "is-selected" : undefined}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td><td><button className="table-action-button" aria-label={t("detailsAction", { guest: item.guest })} onClick={() => { setDetails(item); setError(""); }}><MoreHorizontal size={17} /></button></td></tr>)}
       </tbody></table></div>
       <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span><span className="reservation-card-badges"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</span></div><VisitTimer reservation={item} now={now} /><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
-    </> : null}
+    </> : null}</div>
 
-    <Modal open={Boolean(details) && !editing} variant="drawer" title={t("detailTitle")} subtitle={details?.reference} headerAction={<button type="button" className="drawer-menu-button" aria-label={t("moreActions")}><MoreHorizontal size={16} /></button>} onClose={() => { setDetails(null); setError(""); }} footer={details ? <section className="detail-section detail-actions-section"><h4><CircleCheck size={14} />{t("actionsLabel")}</h4><div className="reservation-management-actions">
-      {details.status === "pending" ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("confirmed")}><Check size={14} />{t("actions.confirmed")}</button> : null}
-      {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary action-arrive" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
-      {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
-      {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
-      <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}</div>
-    </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section> : undefined}>
-      {details ? <div className="detail-stack"><div className="detail-hero"><div className="detail-hero-heading"><h3>{details.guest}</h3></div>{isLate(details, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</div>
-        <div className="detail-row-list">
-          <div className="detail-row"><CalendarDays size={16} /><span>{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span></div>
-          <div className="detail-row"><Clock3 size={16} /><span>{details.time}</span></div>
-          <div className="detail-row"><UsersRound size={16} /><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div>
-          <div className="detail-row detail-row-status"><CircleCheck size={16} /><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span></div>
-          <div className="detail-row"><Phone size={16} /><span>{details.phone || c("noContact")}</span>{details.phone ? <a className="detail-contact-button" href={`tel:${details.phone.replaceAll(" ", "")}`} aria-label={c("phone")}><Phone size={14} /></a> : null}</div>
-          <div className="detail-row"><Mail size={16} /><span>{details.email || c("noEmail")}</span>{details.email ? <a className="detail-contact-button" href={`mailto:${details.email}`} aria-label={c("email")}><Mail size={14} /></a> : null}</div>
-          <div className="detail-row"><Monitor size={16} /><span>{sourceLabel(details.source)}</span></div>
+    {details && !editing ? <aside className="reservation-detail-panel" aria-label={t("detailTitle")}>
+      <header className="reservation-detail-header">
+        <div className="reservation-detail-heading">
+          <span className="detail-panel-eyebrow">{t("detailPanelTitle")}</span>
+          <div className="detail-panel-reference"><span>{details.reference}</span><button type="button" className="drawer-menu-button" aria-label={t("moreActions")}><MoreHorizontal size={16} /></button></div>
         </div>
-        <section className="detail-request"><h4><Pencil size={14} />{t("tableRequests")}</h4><p>{details.note || c("noSpecialRequests")}</p></section>
-        <section className="detail-section"><h4><Clock3 size={14} />{t("timeline")}</h4><div className="detail-timeline">{details.arrivedAt ? <div><i /><span>{timestampLabel(details.arrivedAt)}</span><strong>{t("actualArrival")}</strong></div> : details.status === "arrived" ? <div><i /><span>—</span><strong>{t("arrivalTimeUnavailable")}</strong></div> : <p className="detail-muted">{t("noTimeline")}</p>}{details.departedAt ? <div><i /><span>{timestampLabel(details.departedAt)}</span><strong>{t("actualDeparture")}</strong></div> : null}{details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}</div></section>
-        {error ? <p className="form-error" role="alert">{error}</p> : null}</div> : null}
-    </Modal>
+        <button type="button" className="icon-button" aria-label={c("close")} onClick={() => { setDetails(null); setError(""); }}><X size={16} /></button>
+      </header>
+      <div className="reservation-detail-scroll">
+        <div className="detail-stack">
+          <div className="detail-hero"><h3>{details.guest}</h3>{isLate(details, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</div>
+          <div className="detail-row-list">
+            <div className="detail-row"><CalendarDays size={16} /><span>{format(new Date(`${details.date}T12:00:00Z`), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span></div>
+            <div className="detail-row"><Clock3 size={16} /><span>{details.time}</span></div>
+            <div className="detail-row"><UsersRound size={16} /><span>{details.guests} {details.guests === 1 ? t("detailPeopleOne") : t("detailPeopleMany")}</span></div>
+            <div className="detail-row detail-row-status"><CircleCheck size={16} /><span className={`status-pill ${statusClass[details.status]}`}>{statusName(details.status)}</span></div>
+            <div className="detail-row"><Phone size={16} /><span>{details.phone || c("noContact")}</span>{details.phone ? <a className="detail-contact-button" href={`tel:${details.phone.replaceAll(" ", "")}`} aria-label={c("phone")}><Phone size={14} /></a> : null}</div>
+            <div className="detail-row"><Mail size={16} /><span>{details.email || c("noEmail")}</span>{details.email ? <a className="detail-contact-button" href={`mailto:${details.email}`} aria-label={c("email")}><Mail size={14} /></a> : null}</div>
+            <div className="detail-row"><Monitor size={16} /><span>{sourceLabel(details.source)}</span></div>
+          </div>
+          <section className="detail-request"><h4><Pencil size={14} />{t("tableRequests")}</h4><p>{details.note || c("noSpecialRequests")}</p></section>
+          <section className="detail-section"><h4><Clock3 size={14} />{t("timeline")}</h4><div className="detail-timeline">{details.arrivedAt ? <div><i /><span>{timestampLabel(details.arrivedAt)}</span><strong>{t("actualArrival")}</strong></div> : details.status === "arrived" ? <div><i /><span>—</span><strong>{t("arrivalTimeUnavailable")}</strong></div> : <p className="detail-muted">{t("noTimeline")}</p>}{details.departedAt ? <div><i /><span>{timestampLabel(details.departedAt)}</span><strong>{t("actualDeparture")}</strong></div> : null}{details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}</div></section>
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+        </div>
+      </div>
+      <footer className="reservation-detail-actions"><section className="detail-section detail-actions-section"><h4><CircleCheck size={14} />{t("actionsLabel")}</h4><div className="reservation-management-actions">
+        {details.status === "pending" ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("confirmed")}><Check size={14} />{t("actions.confirmed")}</button> : null}
+        {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary action-arrive" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
+        {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
+        {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
+        <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}</div>
+      </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section></footer>
+    </aside> : null}</div>
     {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} onCheck={checkReservationAvailability} errorFor={translatedError} /> : null}
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
