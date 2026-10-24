@@ -1,0 +1,5 @@
+import { CalendarDays } from "lucide-react";
+
+export default function DashboardPage() {
+  return <><div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Samstag, 24. Oktober</p><h1 className="mt-2 text-[30px] font-medium tracking-[-0.055em] sm:text-[34px]">Guten Morgen.</h1><p className="mt-2 text-sm text-[var(--muted)]">Dein Team-Arbeitsbereich ist bereit.</p></div><section className="mt-9 flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#ddd7cd] bg-[#fbfaf6] px-6 text-center sm:min-h-[360px]"><span className="grid size-12 place-items-center rounded-full border border-[var(--line)] bg-white text-[var(--accent)]"><CalendarDays size={20} strokeWidth={1.6} /></span><h2 className="mt-5 text-lg font-medium tracking-[-0.035em]">Alles an seinem Platz.</h2><p className="mt-2 max-w-[330px] text-sm leading-6 text-[var(--muted)]">Hier entsteht deine tägliche Übersicht. Reservierungen und weitere Einblicke folgen in einem nächsten Schritt.</p></section><p className="mt-5 text-[11px] text-[#a09a8e]">ALTSTADTLIEBE · LÜBECK</p></>;
+}

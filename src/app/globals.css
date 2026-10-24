@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --paper: #f7f5ef;
+  --surface: #fffefa;
+  --ink: #29251f;
+  --muted: #847e73;
+  --line: #e8e4db;
+  --accent: #8b6249;
+  --accent-dark: #694934;
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; background: var(--paper); }
+body { min-height: 100vh; margin: 0; background: var(--paper); color: var(--ink); font-family: "Bricolage Grotesque Variable", sans-serif; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; }
+::selection { background: #e7d8c9; color: var(--ink); }
