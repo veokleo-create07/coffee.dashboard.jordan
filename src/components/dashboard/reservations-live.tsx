@@ -56,8 +56,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   }, [end, loadedRange.end, loadedRange.start, start]);
   useEffect(() => {
     let active = true;
+    let inFlight = false;
     const poll = async () => {
+      if (inFlight) return;
+      inFlight = true;
       const next = await loadReservations(start, end);
+      inFlight = false;
       if (!active) return;
       setResult(next);
       if (next.ok) {
@@ -66,9 +70,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setDetails((current) => current ? next.reservations.find((item) => item.id === current.id) ?? null : null);
       }
     };
-    const interval = window.setInterval(() => { void poll(); }, 15_000);
+    const interval = window.setInterval(() => { void poll(); }, 10_000);
+    const onFocus = () => { if (document.visibilityState === "visible") void poll(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); };
+    return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
   }, [end, start]);
 
   const periodReservations = reservations.filter((item) => item.date >= start && item.date <= end);
@@ -93,7 +100,13 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       const response: ReservationActionResult = await manageReservation(values);
       if (!response.ok) { if (response.code === "RULE_EXCEPTION_REQUIRED") { setCapacityRequired(true); setError(""); } else setError(translatedError(response.code)); return; }
       setCreating(false); setEditing(false); setConfirmCancel(false); setCapacityRequired(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
-      await refresh();
+      if (response.reservation) {
+        setReservations((current) => current.some((item) => item.id === response.reservation?.id)
+          ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
+          : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+        setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
+      }
+      void refresh();
     });
   }
   function performStatus(next: NonNullable<Parameters<typeof manageReservation>[0]["status"]>) {

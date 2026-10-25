@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { checkStaffMembership } from "@/lib/auth/staff";
+import { getStaffContext } from "@/lib/auth/staff";
 
 export type ReservationStatus = "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show";
 export type BookingSource = "website" | "phone" | "walk_in";
@@ -50,11 +50,7 @@ function zonedMidnightUtc(date: string) {
   return new Date(guess).toISOString();
 }
 async function verifiedStaff() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  const membership = await checkStaffMembership(supabase, user.id);
-  return membership.isStaff ? supabase : null;
+  return (await getStaffContext())?.supabase ?? null;
 }
 function mapRow(row: ReservationRow): LiveReservation {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(row.starts_at));
