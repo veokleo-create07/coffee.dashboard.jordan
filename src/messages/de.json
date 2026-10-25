@@ -233,9 +233,9 @@
     "exceptionReason": "Begründung (mindestens 10 Zeichen)",
     "saving": "Wird gespeichert…",
     "cancelTitle": "Reservierung stornieren?",
-  "deleteTitle": "Buchung löschen?",
-  "deleteDescription": "Die Buchung wird aus den aktiven Reservierungen entfernt und in der Historie behalten.",
-  "deleteConfirm": "Buchung löschen",
+    "deleteTitle": "Buchung löschen?",
+    "deleteDescription": "Die Buchung wird aus den aktiven Reservierungen entfernt und in der Historie behalten.",
+    "deleteConfirm": "Buchung löschen",
     "keep": "Reservierung behalten",
     "cancelDescription": "Diese Reservierung wird als storniert markiert.",
     "capacityRelease": "Die reservierte Kapazität wird sofort freigegeben.",
@@ -245,7 +245,7 @@
       "completed": "Als abgeschlossen markieren",
       "noShow": "Als nicht erschienen markieren",
       "cancel": "Reservierung stornieren",
-    "delete": "Buchung löschen",
+      "delete": "Buchung löschen",
       "create": "Reservierung erstellen",
       "confirmed": "Reservierung bestätigen",
       "free": "Als frei markieren"
@@ -257,8 +257,9 @@
       "arrived": "Ankunft erfasst.",
       "completed": "Besuch als beendet erfasst.",
       "cancelled": "Reservierung storniert; Kapazität freigegeben.",
-    "deleted": "Buchung gelöscht und Kapazität freigegeben.",
-      "no_show": "Nichterscheinen erfasst."
+      "deleted": "Buchung gelöscht und Kapazität freigegeben.",
+      "no_show": "Nichterscheinen erfasst.",
+      "bulkDeleted": "{count} Buchungen gelöscht"
     },
     "errors": {
       "invalidInput": "Bitte prüfen Sie die Reservierungsdaten.",
@@ -297,7 +298,13 @@
     "noTimeline": "Noch keine Ankunft oder Abreise erfasst.",
     "actionsLabel": "Aktionen",
     "detailPanelTitle": "Reservierung",
-    "capacityWarning": "Diese Buchung würde die geplante Belegung im Zeitraum auf {guests} Gäste erhöhen. Bestätigen Sie die autorisierte Ausnahme, um fortzufahren."
+    "capacityWarning": "Diese Buchung würde die geplante Belegung im Zeitraum auf {guests} Gäste erhöhen. Bestätigen Sie die autorisierte Ausnahme, um fortzufahren.",
+    "selectAll": "Alle auswählen",
+    "selectBooking": "Buchung für {guest} auswählen",
+    "selectedCount": "{count} ausgewählt",
+    "deleteSelected": "Ausgewählte löschen",
+    "bulkDeleteTitle": "Ausgewählte Buchungen löschen?",
+    "bulkDeleteDescription": "Die ausgewählten Buchungen werden storniert und aus der Dashboard-Ansicht entfernt. Sie bleiben in der Supabase-Historie."
   },
   "Analytics": {
     "eyebrow": "Ein Gefühl für den Rhythmus",

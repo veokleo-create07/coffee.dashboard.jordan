@@ -233,9 +233,9 @@
     "exceptionReason": "Reason for exception (at least 10 characters)",
     "saving": "Saving…",
     "cancelTitle": "Cancel this reservation?",
-  "deleteTitle": "Delete this booking?",
-  "deleteDescription": "This booking will be removed from active bookings and retained in the reservation history.",
-  "deleteConfirm": "Delete booking",
+    "deleteTitle": "Delete this booking?",
+    "deleteDescription": "This booking will be removed from active bookings and retained in the reservation history.",
+    "deleteConfirm": "Delete booking",
     "keep": "Keep reservation",
     "cancelDescription": "This reservation will be marked as cancelled.",
     "capacityRelease": "Its reserved capacity will be released immediately.",
@@ -245,7 +245,7 @@
       "completed": "Mark completed",
       "noShow": "Mark no-show",
       "cancel": "Cancel reservation",
-    "delete": "Delete booking",
+      "delete": "Delete booking",
       "create": "Create reservation",
       "confirmed": "Confirm reservation",
       "free": "Mark as free"
@@ -257,8 +257,9 @@
       "arrived": "Arrival recorded.",
       "completed": "Visit marked as free.",
       "cancelled": "Reservation cancelled; capacity released.",
-    "deleted": "Booking deleted and capacity released.",
-      "no_show": "No-show recorded."
+      "deleted": "Booking deleted and capacity released.",
+      "no_show": "No-show recorded.",
+      "bulkDeleted": "{count} bookings deleted"
     },
     "errors": {
       "invalidInput": "Please check the reservation details.",
@@ -297,7 +298,13 @@
     "noTimeline": "No arrival or departure has been recorded yet.",
     "actionsLabel": "Actions",
     "detailPanelTitle": "Reservation",
-    "capacityWarning": "This booking would bring the overlapping scheduled occupancy to {guests} guests. Confirm the authorized exception to continue."
+    "capacityWarning": "This booking would bring the overlapping scheduled occupancy to {guests} guests. Confirm the authorized exception to continue.",
+    "selectAll": "Select all",
+    "selectBooking": "Select booking for {guest}",
+    "selectedCount": "{count} selected",
+    "deleteSelected": "Delete selected",
+    "bulkDeleteTitle": "Delete selected bookings?",
+    "bulkDeleteDescription": "The selected bookings will be cancelled and removed from the dashboard view. They remain in Supabase history."
   },
   "Analytics": {
     "eyebrow": "Finding the rhythm",

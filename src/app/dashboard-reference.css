@@ -358,6 +358,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
 
+/* Bulk selection controls stay compact on desktop and become touch-safe on phones. */
+.select-column { width: 38px; padding-inline: 10px !important; text-align: center; }
+.select-column input, .bulk-selection-bar input, .bulk-select-inline input, .reservation-card-select input { width: 16px; height: 16px; appearance: none; border: 1px solid #cfc4b9; border-radius: 50%; background: #fffdfa; cursor: pointer; }
+.select-column input:checked, .bulk-selection-bar input:checked, .bulk-select-inline input:checked, .reservation-card-select input:checked { border-color: var(--ref-espresso); background: var(--ref-espresso); box-shadow: inset 0 0 0 4px #fffdfa; }
+.bulk-selection-bar { display: flex; min-height: 42px; align-items: center; justify-content: flex-end; gap: 12px; border: 1px solid var(--ref-border); border-bottom: 0; background: #fffefa; padding: 7px 12px; color: var(--ref-muted); font-size: 11px; }
+.bulk-selection-bar label, .bulk-select-inline, .reservation-card-select { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.bulk-selection-bar label { margin-right: auto; color: var(--ref-ink); }
+.button-compact { min-height: 32px; padding: 0 11px; font-size: 11px; }
+.overview-table-actions { display: flex; align-items: center; gap: 14px; }
+.bulk-select-inline { color: var(--ref-muted); font-size: 10px; font-weight: 600; }
+.reservation-card-select { min-width: 0; }
+.reservation-card-select .reservation-card-time { min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+@media (max-width: 767px) {
+  .bulk-selection-bar { justify-content: space-between; padding-inline: 10px; }
+  .bulk-selection-bar label { margin-right: 0; }
+  .overview-table-actions { align-items: flex-end; flex-direction: column; gap: 6px; }
+  .select-column { width: 34px; padding-inline: 7px !important; }
+  .reservation-card-select { gap: 8px; }
+}
+
 /* Inline reservation split workspace */
 .reservation-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: stretch; min-width: 0; }
 .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 400px; }

@@ -54,7 +54,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [range, setRange] = useState<Range>("day"); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations.filter((item) => item.status !== "cancelled") : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
-  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
+  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
   const start = key(bounds.start); const end = key(bounds.end); const selectedKey = key(date);
@@ -141,6 +141,33 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     if (next === "cancelled") { setConfirmCancel(true); return; }
     submit({ action: "status", id: details.id, status: next });
   }
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  function toggleAllShown() {
+    setSelectedIds((current) => {
+      const next = new Set(current); const allSelected = shown.length > 0 && shown.every((item) => next.has(item.id));
+      shown.forEach((item) => allSelected ? next.delete(item.id) : next.add(item.id)); return next;
+    });
+  }
+  async function deleteSelected() {
+    const ids = [...selectedIds].filter((id) => shown.some((item) => item.id === id));
+    if (!ids.length) return;
+    setBulkDeleting(true); setError("");
+    const succeeded: string[] = []; let firstError = "";
+    for (const id of ids) {
+      const response = await manageReservation({ action: "status", id, status: "cancelled" });
+      if (response.ok) succeeded.push(id); else if (!firstError) firstError = translatedError(response.code);
+    }
+    if (succeeded.length) {
+      setHiddenReservationIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.add(id)); window.localStorage.setItem(hiddenReservationStorageKey, JSON.stringify([...next])); return next; });
+      setReservations((current) => current.filter((item) => !succeeded.includes(item.id)));
+      setDetails((current) => current && succeeded.includes(current.id) ? null : current);
+      setSelectedIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.delete(id)); return next; });
+      setMessage(t("success.bulkDeleted", { count: succeeded.length }));
+    }
+    setBulkDeleting(false); setConfirmBulkDelete(false); if (firstError) setError(firstError); void refresh();
+  }
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
   return <>
@@ -159,14 +186,15 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
     {range === "month" && result.ok ? <MonthCalendar month={date} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
     <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
+    {shown.length ? <div className="bulk-selection-bar"><label><input type="checkbox" checked={shown.every((item) => selectedIds.has(item.id))} onChange={toggleAllShown} aria-label={t("selectAll")} />{t("selectAll")}</label>{selectedIds.size ? <><span>{t("selectedCount", { count: selectedIds.size })}</span><button type="button" className="button-danger button-compact" onClick={() => setConfirmBulkDelete(true)}><Trash2 size={14} />{t("deleteSelected")}</button></> : null}</div> : null}
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
     {result.ok && !loading && !shown.length ? <div className="empty-search">{query || status !== "all" ? t("noResults") : t("noReservations")}</div> : null}
     {result.ok && shown.length ? <>
-      <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th><th>{t("tableActions")}</th></tr></thead><tbody>
-        {shown.map((item) => <tr key={item.id} className={details?.id === item.id ? "is-selected" : undefined}><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td><td><button className="table-action-button" aria-label={t("detailsAction", { guest: item.guest })} onClick={() => { setDetails(item); setError(""); }}><MoreHorizontal size={17} /></button></td></tr>)}
+      <div className="reservations-table table-wrap"><table className="data-table management-table"><thead><tr><th className="select-column"><span className="sr-only">{t("selectAll")}</span><input type="checkbox" checked={shown.length > 0 && shown.every((item) => selectedIds.has(item.id))} onChange={toggleAllShown} aria-label={t("selectAll")} /></th><th>{t("tableTime")}</th><th>{t("tableGuest")}</th><th>{t("tablePeople")}</th><th>{t("tableStatus")}</th><th>{t("tableSource")}</th><th>{t("tableRequests")}</th><th>{t("tableActions")}</th></tr></thead><tbody>
+        {shown.map((item) => <tr key={item.id} className={details?.id === item.id ? "is-selected" : undefined}><td className="select-column"><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={t("selectBooking", { guest: item.guest })} /></td><td className="time-cell">{item.time}</td><td><button className="table-name-button" onClick={() => { setDetails(item); setError(""); }}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button></td><td>{item.guests}</td><td className="status-detail-cell"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}<VisitTimer reservation={item} now={now} /></td><td>{sourceLabel(item.source)}</td><td>{item.note || <span className="detail-muted">{c("noRequests")}</span>}</td><td><button className="table-action-button" aria-label={t("detailsAction", { guest: item.guest })} onClick={() => { setDetails(item); setError(""); }}><MoreHorizontal size={17} /></button></td></tr>)}
       </tbody></table></div>
-      <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span><span className="reservation-card-badges"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</span></div><VisitTimer reservation={item} now={now} /><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
+      <div className="booking-card-list">{shown.map((item) => <article className="reservation-card" key={item.id}><div className="reservation-card-top"><label className="reservation-card-select"><input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={t("selectBooking", { guest: item.guest })} /><span className="reservation-card-time">{item.date === today ? item.time : `${format(new Date(`${item.date}T12:00:00Z`), { day: "numeric", month: "short" })} · ${item.time}`}</span></label><span className="reservation-card-badges"><span className={`status-pill ${statusClass[item.status]}`}>{statusName(item.status)}</span>{isLate(item, now) ? <span className="late-pill">{t("lateFlag")}</span> : null}</span></div><VisitTimer reservation={item} now={now} /><button className="table-name-button card-name" onClick={() => setDetails(item)}><span className="guest-primary">{item.guest}</span><span className="guest-secondary">{item.email || item.phone || c("noContact")}</span></button><div className="reservation-card-bottom"><span className="reservation-card-meta"><UsersRound size={12} /> {item.guests} {c("personShort")} · {sourceLabel(item.source)} · {item.reference}</span><button className="button-quiet" onClick={() => setDetails(item)}>{t("details")}</button></div></article>)}</div>
     </> : null}</div>
 
     {details && !editing ? <aside className="reservation-detail-panel" aria-label={t("detailTitle")}>
@@ -208,6 +236,9 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     </Modal>
     <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" }, { removeFromView: true })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
       <p className="cancel-confirm-copy">{t("deleteDescription")}</p>
+    </Modal>
+    <Modal open={confirmBulkDelete} variant="confirm" title={t("bulkDeleteTitle")} subtitle={t("selectedCount", { count: selectedIds.size })} onClose={() => { if (!bulkDeleting) setConfirmBulkDelete(false); }} footer={<><button className="button-secondary" disabled={bulkDeleting} onClick={() => setConfirmBulkDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={bulkDeleting} onClick={() => void deleteSelected()}>{bulkDeleting ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteSelected")}</>}</button></>}>
+      <p className="cancel-confirm-copy">{t("bulkDeleteDescription")}</p>
     </Modal>
     <Toast message={message} onDismiss={() => setMessage("")} />
   </>;
