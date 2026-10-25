@@ -388,3 +388,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .reservation-detail-header { padding-top: max(16px, env(safe-area-inset-top)); }
   .reservation-detail-actions { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
+
+/* Reservation editor refinement */
+.modal-card-dialog { width: min(100%, 590px); border-radius: 14px; }
+.modal-card-dialog .modal-head { padding: 24px 30px 18px; }
+.modal-card-dialog .modal-title { font-size: 26px; letter-spacing: -.035em; }
+.modal-card-dialog .modal-subtitle { margin-top: 5px; color: #9b9189; font-size: 10px; letter-spacing: .04em; }
+.modal-card-dialog .modal-body { padding: 22px 30px 24px; }
+.modal-card-dialog .modal-foot { padding: 15px 30px 24px; }
+.modal-card-dialog .form-grid { gap: 16px 16px; }
+.modal-card-dialog .form-field label { display: flex; align-items: center; gap: 6px; color: #655d57; font-size: 11px; font-weight: 600; }
+.modal-card-dialog .form-field label svg { color: #8f8379; }
+.modal-card-dialog .form-field input, .modal-card-dialog .form-field select, .modal-card-dialog .form-field textarea { border-color: #e6ded5; background: #fffdfa; box-shadow: inset 0 1px 1px rgba(41, 32, 27, .025); }
+.modal-card-dialog .form-field input:hover, .modal-card-dialog .form-field select:hover, .modal-card-dialog .form-field textarea:hover { border-color: #cfc1b5; }
+.modal-card-dialog .availability-check { display: flex; align-items: center; gap: 12px; margin-top: 20px; border-top: 1px solid var(--ref-border); padding-top: 18px; }
+.modal-card-dialog .availability-check .button-secondary { min-height: 36px; border-radius: 7px; }
+.modal-card-dialog .availability-check p { margin: 0; font-size: 11px; }
+.modal-card-dialog .modal-foot > button { min-height: 40px; border-radius: 8px; }
+.modal-card-dialog .modal-foot > .button-primary { box-shadow: 0 7px 16px rgba(41, 32, 27, .12); }
+@media (max-width: 680px) {
+  .modal-card-dialog .modal-head { padding: 20px 18px 15px; }
+  .modal-card-dialog .modal-body { padding: 18px 18px 20px; }
+  .modal-card-dialog .modal-foot { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .modal-card-dialog .availability-check { align-items: flex-start; flex-direction: column; gap: 8px; }
+}
