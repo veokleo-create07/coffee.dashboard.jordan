@@ -422,6 +422,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-detail-panel .detail-timeline .visit-timer.is-overdue svg { color: var(--ref-danger); }
 
 /* Final reference layout pass for the two live workspaces. */
+.dashboard-frame { margin: 24px; min-height: calc(100vh - 48px); grid-template-columns: 214px minmax(0, 1fr); border-radius: 15px; background: #fffdfa; box-shadow: 0 20px 65px rgba(55, 41, 29, .06); }
+.dashboard-sidebar { top: 24px; height: calc(100vh - 48px); padding: 31px 14px 18px; background: #fffdfa; }
+.dashboard-content { padding: 30px 34px 40px; }
+.page-intro { margin-bottom: 22px; }
+.page-title { font-size: clamp(35px, 3vw, 42px); font-weight: 720; letter-spacing: -.055em; }
+.page-description { margin-top: 5px; font-size: 17px; }
+.metric-grid { gap: 14px; }
+.metric-card { min-height: 122px; gap: 18px; border-radius: 12px; background: #fffefa; padding: 20px 22px; }
+.metric-icon { width: 58px; height: 58px; flex-basis: 58px; background: #f3efe9; }
+.metric-value { font-size: 30px; font-weight: 700; }
+.metric-label { margin-top: 6px; font-size: 12px; }
+.metric-detail { margin-top: 5px; font-size: 9px; }
+.range-switcher { border-radius: 9px; background: #fffefa; }
+.range-switcher > button, .range-button { min-height: 42px; font-size: 12px; }
+.panel, .reservations-table, .month-calendar, .week-day-card { border-radius: 12px; background: #fffefa; box-shadow: 0 8px 30px rgba(54, 39, 28, .025); }
+.panel-heading { min-height: 66px; padding: 14px 20px; }
+.panel-heading h2 { font-size: 17px; font-weight: 680; }
+.data-table th { height: 45px; padding: 0 19px; font-size: 9px; }
+.data-table td { height: 50px; padding: 7px 19px; font-size: 12px; }
+.guest-primary { font-size: 12px; font-weight: 620; }
+.status-pill { padding: 6px 10px; font-size: 9px; }
+.overview-grid { margin-top: 19px; }
 .overview-planning-toolbar { align-items: center; margin-top: 2px; margin-bottom: 16px; }
 .overview-planning-toolbar .range-switcher { width: 330px; }
 .overview-grid { grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr); gap: 16px; margin-top: 17px; }
@@ -434,12 +456,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-toolbar .search-field input { width: min(290px, 28vw); }
 .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 360px; }
 
+@media (max-width: 1180px) {
+  .dashboard-frame { grid-template-columns: 176px minmax(0, 1fr); }
+  .dashboard-content { padding-right: 22px; padding-left: 22px; }
+  .metric-card { gap: 11px; padding: 15px; }
+  .metric-icon { width: 48px; height: 48px; flex-basis: 48px; }
+}
+
 @media (max-width: 980px) and (min-width: 681px) {
   .overview-grid { grid-template-columns: minmax(0, 1fr); }
   .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 340px; }
 }
 
 @media (max-width: 680px) {
+  .dashboard-frame { margin: 0; min-height: 100vh; border-radius: 0; }
+  .dashboard-content { padding: 21px 13px 28px; }
+  .page-title { font-size: 29px; }
+  .page-description { font-size: 14px; }
+  .metric-card { min-height: 105px; gap: 9px; padding: 12px 10px; }
+  .metric-icon { width: 37px; height: 37px; flex-basis: 37px; }
+  .metric-value { font-size: 22px; }
   .overview-planning-toolbar { align-items: stretch; }
   .overview-planning-toolbar .range-switcher { width: 100%; }
   .overview-planning-actions .new-booking-button { min-width: 0; padding: 0 12px; font-size: 11px; }
