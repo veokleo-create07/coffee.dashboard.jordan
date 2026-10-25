@@ -277,8 +277,7 @@
       "reasonRequired": "Geben Sie eine Ausnahmebegründung mit mindestens 10 Zeichen ein.",
       "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
       "visitStillActive": "Markiere den Gast zuerst als gegangen, bevor du die Reservierung schließt.",
-      "occupancyTimestampForbidden": "Ankunfts- und Abschiedszeiten werden automatisch erfasst und können nicht direkt bearbeitet werden.",
-      "absoluteCapacity": "Diese Buchung würde das absolute Maximum von 30 Gästen im überlappenden Zeitraum überschreiten."
+      "occupancyTimestampForbidden": "Ankunfts- und Abschiedszeiten werden automatisch erfasst und können nicht direkt bearbeitet werden."
     },
     "actualArrival": "Tatsächliche Ankunft",
     "actualDeparture": "Tatsächlicher Abschied",
