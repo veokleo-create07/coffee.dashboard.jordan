@@ -420,3 +420,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-detail-panel .detail-timeline .visit-timer svg { color: #8a6f55; }
 .reservation-detail-panel .detail-timeline .visit-timer.is-overdue { color: var(--ref-danger); }
 .reservation-detail-panel .detail-timeline .visit-timer.is-overdue svg { color: var(--ref-danger); }
+
+/* Final reference layout pass for the two live workspaces. */
+.overview-planning-toolbar { align-items: center; margin-top: 2px; margin-bottom: 16px; }
+.overview-planning-toolbar .range-switcher { width: 330px; }
+.overview-grid { grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr); gap: 16px; margin-top: 17px; }
+.overview-table, .overview-grid > .panel { min-height: 0; }
+.overview-grid .data-table td { height: 48px; }
+.overview-grid .panel-heading { min-height: 62px; }
+.reservation-toolbar { display: grid; align-items: center; justify-content: stretch; gap: 10px; margin-top: 2px; }
+.reservation-toolbar > .range-switcher { width: 330px; min-width: 330px; }
+.reservation-toolbar .toolbar-lower { justify-content: flex-start; }
+.reservation-toolbar .search-field input { width: min(290px, 28vw); }
+.reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 360px; }
+
+@media (max-width: 980px) and (min-width: 681px) {
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
+  .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+
+@media (max-width: 680px) {
+  .overview-planning-toolbar { align-items: stretch; }
+  .overview-planning-toolbar .range-switcher { width: 100%; }
+  .overview-planning-actions .new-booking-button { min-width: 0; padding: 0 12px; font-size: 11px; }
+  .reservation-toolbar { gap: 8px; }
+  .reservation-toolbar > .range-switcher { width: 100%; min-width: 0; }
+  .reservation-toolbar .toolbar-lower { justify-content: stretch; }
+  .reservation-toolbar .search-field input { width: 100%; }
+  .overview-grid { grid-template-columns: 1fr; gap: 10px; }
+}

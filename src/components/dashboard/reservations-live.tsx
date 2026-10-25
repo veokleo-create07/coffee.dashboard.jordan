@@ -8,6 +8,7 @@ import { Modal, Toast } from "@/components/dashboard/dialog";
 import { loadReservations, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus } from "@/app/dashboard/actions";
 
 type StatusFilter = "all" | LiveReservation["status"];
+type Range = "day" | "week" | "month";
 const statusClass: Record<ReservationStatus, string> = { pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", completed: "status-completed", cancelled: "status-cancelled", no_show: "status-no-show" };
 const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const activeStatuses = new Set<ReservationStatus>(["pending", "confirmed", "arrived"]);
@@ -15,6 +16,9 @@ const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPAC
 const lateThresholdMs = 15 * 60_000;
 const visitDurationMs = 90 * 60_000;
 const hiddenReservationStorageKey = "altstadtliebe:hidden-reservation-ids";
+const startOfWeek = (date: Date) => { const value = new Date(date); value.setDate(value.getDate() - ((value.getDay() + 6) % 7)); return value; };
+const endOfWeek = (date: Date) => { const value = startOfWeek(date); value.setDate(value.getDate() + 6); return value; };
+const monthBounds = (date: Date) => ({ start: new Date(date.getFullYear(), date.getMonth(), 1), end: new Date(date.getFullYear(), date.getMonth() + 1, 0) });
 function isLate(reservation: LiveReservation, now: number) {
   const scheduled = Date.parse(reservation.startsAt);
   if (reservation.arrivedAt) return Date.parse(reservation.arrivedAt) > scheduled + lateThresholdMs;
@@ -36,13 +40,24 @@ function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: n
   </span>;
 }
 
+function WeekSummary({ start, selected, reservations, locale, onSelect }: { start: Date; selected: string; reservations: LiveReservation[]; locale: string; onSelect: (date: string) => void }) {
+  const c = useTranslations("Common");
+  return <section className="week-summary" aria-label={c("bookings")}>{Array.from({ length: 7 }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); const dayKey = key(day); const count = reservations.filter((item) => item.date === dayKey).length; return <button type="button" className={`week-day-card${dayKey === selected ? " is-selected" : ""}`} key={dayKey} onClick={() => onSelect(dayKey)}><span className="week-day-label">{new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", timeZone: "Europe/Berlin" }).format(day)}</span><strong>{count}</strong><span className="week-mini-bars" aria-hidden="true">{[.45, .72, 1, .68].map((height, bar) => <i key={bar} style={{ height: `${Math.max(7, Math.round((count + 5) * height))}px` }} />)}</span><span className="week-day-caption">{c("bookings")}</span></button>; })}</section>;
+}
+
+function MonthCalendar({ month, selected, reservations, locale, onSelect }: { month: Date; selected: string; reservations: LiveReservation[]; locale: string; onSelect: (date: string) => void }) {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1); const offset = (first.getDay() + 6) % 7; const gridStart = new Date(first); gridStart.setDate(first.getDate() - offset); const days = Array.from({ length: 42 }, (_, index) => { const value = new Date(gridStart); value.setDate(gridStart.getDate() + index); return value; }); const weekdays = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(2026, 9, 19 + index)));
+  return <section className="month-calendar" aria-label={new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month)}><div className="month-weekdays">{weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}</div><div className="month-grid">{days.map((day) => { const dayKey = key(day); const items = reservations.filter((item) => item.date === dayKey); const outside = day.getMonth() !== month.getMonth(); const sources = Array.from(new Set(items.map((item) => item.source))).slice(0, 2); return <button type="button" className={`month-day${outside ? " is-outside" : ""}${dayKey === selected ? " is-selected" : ""}`} key={dayKey} onClick={() => onSelect(dayKey)}><strong>{day.getDate()}</strong><span className="month-source-dots" aria-hidden="true">{sources.map((source) => <i className={`source-${source}`} key={source} />)}</span>{!outside && items.length ? <span>{items.length}</span> : null}</button>; })}</div></section>;
+}
+
 export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
-  const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
+  const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [range, setRange] = useState<Range>("day"); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
-  const start = key(date); const end = start;
+  const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
+  const start = key(bounds.start); const end = key(bounds.end); const selectedKey = key(date);
 
   async function refresh() {
     const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : [];
@@ -97,7 +112,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const errorText = !result.ok ? result.reason === "unauthorized" ? c("reservationUnauthorized") : result.reason === "permission" ? c("reservationPermission") : c("reservationLoadError") : "";
   const translatedError = (code: string) => t(`errors.${errorKeys[code] ?? "unavailable"}`);
   const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
-  function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction); return next; }); }
+  function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction * (range === "week" ? 7 : range === "month" ? 30 : 1)); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0], options?: { removeFromView?: boolean }) {
     setError(""); startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
@@ -124,7 +139,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
   return <>
-    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
+    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{range === "day" ? title : range === "week" ? `${format(bounds.start, { day: "numeric", month: "short" })} – ${format(bounds.end, { day: "numeric", month: "short", year: "numeric" })}` : format(date, { month: "long", year: "numeric" })}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => { setDate(new Date(`${today}T12:00:00`)); setRange("day"); }}>{c("today")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
     <section className="metric-grid reservations-metrics" aria-label={t("periodLabel")}>
       <MetricCard label={t("count")} value={result.ok ? periodReservations.length : "—"} detail={t("liveDataLabel")} icon={<CalendarDays size={18} />} />
       <MetricCard label={t("expectedGuests")} value={result.ok ? expectedGuests : "—"} detail={t("activeBookingsOnly")} icon={<UsersRound size={18} />} tone="sage" />
@@ -132,10 +147,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       <MetricCard label={t("noShows")} value={result.ok ? noShows : "—"} detail={t("periodNoShow")} icon={<UserX size={18} />} tone="stone" />
     </section>
 
-    <div className="reservation-toolbar"><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+    <div className="reservation-toolbar"><div className="range-switcher" aria-label={c("bookings")}><button type="button" className={range === "day" ? "is-active" : ""} onClick={() => setRange("day")}>{t("day")}</button><button type="button" className={range === "week" ? "is-active" : ""} onClick={() => setRange("week")}>{t("week")}</button><button type="button" className={range === "month" ? "is-active" : ""} onClick={() => setRange("month")}>{t("month")}</button></div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
+    {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
+    {range === "month" && result.ok ? <MonthCalendar month={date} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
     <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
