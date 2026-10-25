@@ -149,6 +149,11 @@
   "Reservations": {
     "eyebrow": "Table by table",
     "title": "Reservations",
+    "visitTagTitle": "Add a quick visit tag",
+    "visitTagDescription": "Choose one visual cue to help the team find this party during service.",
+    "visitTagLabel": "Visit cue",
+    "visitTagSkip": "Skip",
+    "visitTags": { "window": "Window side", "counter": "Counter", "back": "Back room", "entrance": "Near entrance", "stroller": "Stroller", "birthday": "Birthday" },
     "description": "A clear view for thoughtful hosting.",
     "day": "Day",
     "week": "Week",

@@ -358,6 +358,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
 
+.visit-tag-pill { display:inline-flex; align-items:center; gap:4px; margin-left:5px; padding:3px 7px; border:1px solid #e7ded3; border-radius:999px; background:#f6f1eb; color:#71665c; font-size:10px; line-height:1.1; white-space:nowrap; }
+.visit-tag-prompt { margin:0 0 12px; color:#756b61; font-size:13px; }
+.visit-tag-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.visit-tag-option { display:flex; align-items:center; gap:7px; min-height:38px; padding:8px 10px; border:1px solid #e8e0d8; border-radius:8px; background:#fffdfa; color:#4c433d; font:inherit; font-size:12px; text-align:left; cursor:pointer; }
+.visit-tag-option:hover, .visit-tag-option.is-selected { border-color:#29201b; background:#f2ebe3; color:#29201b; }
+.detail-row strong { font-weight:600; color:#39312c; }
+
 /* Bulk selection controls stay compact on desktop and become touch-safe on phones. */
 .select-column { width: 38px; padding-inline: 10px !important; text-align: center; }
 .select-column input, .bulk-selection-bar input, .bulk-select-inline input, .reservation-card-select input { width: 16px; height: 16px; appearance: none; border: 1px solid #cfc4b9; border-radius: 50%; background: #fffdfa; cursor: pointer; }

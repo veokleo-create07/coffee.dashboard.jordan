@@ -149,6 +149,11 @@
   "Reservations": {
     "eyebrow": "Tisch für Tisch",
     "title": "Reservierungen",
+    "visitTagTitle": "Kurzen Besuchshinweis hinzufügen",
+    "visitTagDescription": "Wähle einen visuellen Hinweis, damit das Team die Gruppe leichter findet.",
+    "visitTagLabel": "Besuchshinweis",
+    "visitTagSkip": "Überspringen",
+    "visitTags": { "window": "Fensterseite", "counter": "Tresen", "back": "Hinten", "entrance": "Eingang", "stroller": "Kinderwagen", "birthday": "Geburtstag" },
     "description": "Der Überblick für gute Gastgebermomente.",
     "day": "Tag",
     "week": "Woche",
