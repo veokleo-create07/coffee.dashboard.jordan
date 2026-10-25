@@ -1,7 +1,9 @@
 -- PROPOSAL ONLY. Apply only after reviewing against the live shared project.
--- Staff capacity extension: normal online capacity remains unchanged; authorized staff
--- may override it up to an absolute 30 guest overlapping peak.
--- All checks use the existing reservation advisory lock and 90-minute windows.
+-- Staff capacity extension: public bookings retain the configured 26-guest simultaneous limit.
+-- Authorized staff may create one reservation for 1-30 guests even when it overlaps
+-- other bookings. The existing advisory lock serializes all reservation writes.
+-- The repository Phase 5 definitions use altstadtliebe-reservation-booking; verify
+-- the live public RPC uses the same key before applying this proposal.
 
 create or replace function public.staff_reservation_peak_guests(
   p_starts_at timestamptz, p_ends_at timestamptz, p_guest_count integer,
@@ -36,11 +38,15 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('altstadtliebe-reservation-booking', 0));
   if new.status not in ('pending','confirmed','arrived','completed') then return new; end if;
   v_override := current_setting('app.staff_rule_override', true) = 'true' and public.staff_reservation_access(true);
-  select case when v_override then 30 else least(total_reservable_capacity, 26) end into v_capacity
+  -- A staff RPC may explicitly mark this transaction after verifying staff
+  -- authorization. Staff reservations are still limited to 30 guests per row,
+  -- but are not subject to the public simultaneous-capacity ceiling.
+  if v_override then return new; end if;
+  select least(total_reservable_capacity, 26) into v_capacity
     from public.booking_settings where id = 'default';
   if v_capacity is null or v_capacity < 1 then raise exception using errcode='P0001', message='CAPACITY_CONFIG: reservation capacity is unavailable'; end if;
   v_exceeded := public.staff_reservation_peak_guests(new.starts_at, new.ends_at, new.guest_count, new.id) > v_capacity;
-  if v_exceeded then raise exception using errcode='P0001', message=case when v_override then 'ABSOLUTE_CAPACITY' else 'RESERVATION_FULL: simultaneous guest capacity exceeded' end; end if;
+  if v_exceeded then raise exception using errcode='P0001', message='RESERVATION_FULL: simultaneous guest capacity exceeded'; end if;
   return new;
 end; $$;
 revoke all on function public.enforce_reservation_simultaneous_capacity() from public, anon, authenticated;
@@ -61,8 +67,7 @@ begin
   v_violation := public.staff_reservation_rule_violation(v_start,p_guest_count,p_booking_source);
   if v_violation is not null then return query select false,v_violation,(v_violation <> 'PAST' and public.staff_reservation_access(true)),v_settings.reservation_duration_minutes; return; end if;
   v_peak := public.staff_reservation_peak_guests(v_start,v_end,p_guest_count,p_exclude_reservation_id); v_online := least(v_settings.total_reservable_capacity,26);
-  if v_peak > 30 then return query select false,'ABSOLUTE_CAPACITY'::text,false,v_settings.reservation_duration_minutes;
-  elsif v_peak > v_online then return query select false,'RESERVATION_FULL'::text,public.staff_reservation_access(true),v_settings.reservation_duration_minutes;
+  if v_peak > v_online then return query select false,'RESERVATION_FULL'::text,public.staff_reservation_access(true),v_settings.reservation_duration_minutes;
   end if;
   return query select true,'AVAILABLE'::text,false,v_settings.reservation_duration_minutes;
 end; $$;
@@ -115,7 +120,7 @@ begin
     if btrim(coalesce(p_customer_name, '')) = '' or char_length(btrim(p_customer_name)) > 160
       or char_length(coalesce(p_customer_email, '')) > 320 or (nullif(btrim(p_customer_email), '') is not null and (position('@' in p_customer_email) = 0 or p_customer_email ~ '[[:space:]]')) or char_length(coalesce(p_customer_phone, '')) > 40
       or (nullif(btrim(p_customer_email), '') is null and nullif(btrim(p_customer_phone), '') is null)
-      or p_guest_count is null or p_guest_count < 1
+      or p_guest_count is null or p_guest_count < 1 or p_guest_count > 30
       or coalesce(p_special_requests, '') <> coalesce(btrim(p_special_requests), '')
       or char_length(coalesce(p_special_requests, '')) > 2000
       or coalesce(p_booking_source, '') not in ('phone', 'walk_in')
@@ -128,7 +133,6 @@ begin
     v_end := v_start + make_interval(mins => v_settings.reservation_duration_minutes);
     v_peak := public.staff_reservation_peak_guests(v_start, v_end, p_guest_count, null);
     v_online_capacity := least(v_settings.total_reservable_capacity, 26);
-    if v_peak > 30 then raise exception using errcode = 'P0001', message = 'ABSOLUTE_CAPACITY'; end if;
     v_capacity_exception := v_peak > v_online_capacity;
     v_violation := public.staff_reservation_rule_violation(v_start, p_guest_count, p_booking_source);
     if v_violation in ('PAST','INVALID_INPUT','BOOKING_WINDOW','CLOSED','OUTSIDE_HOURS','INVALID_SLOT') then
@@ -150,7 +154,7 @@ begin
     select * into v_before from public.reservations where id = p_reservation_id for update;
     if not found then raise exception using errcode = 'P0001', message = 'NOT_FOUND'; end if;
     if v_before.status in ('cancelled', 'completed', 'no_show') then raise exception using errcode = 'P0001', message = 'INVALID_TRANSITION'; end if;
-    if p_guest_count is null or p_guest_count < 1 or p_date is null or p_time is null
+    if p_guest_count is null or p_guest_count < 1 or p_guest_count > 30 or p_date is null or p_time is null
       or char_length(coalesce(p_special_requests, '')) > 2000
       or coalesce(p_special_requests, '') <> coalesce(btrim(p_special_requests), '') then
       raise exception using errcode = 'P0001', message = 'INVALID_INPUT';
@@ -161,7 +165,6 @@ begin
     v_end := v_start + make_interval(mins => v_settings.reservation_duration_minutes);
     v_peak := public.staff_reservation_peak_guests(v_start, v_end, p_guest_count, p_reservation_id);
     v_online_capacity := least(v_settings.total_reservable_capacity, 26);
-    if v_peak > 30 then raise exception using errcode = 'P0001', message = 'ABSOLUTE_CAPACITY'; end if;
     v_capacity_exception := v_peak > v_online_capacity;
     v_violation := public.staff_reservation_rule_violation(v_start, p_guest_count, v_before.booking_source);
     if v_violation in ('PAST','INVALID_INPUT','BOOKING_WINDOW','CLOSED','OUTSIDE_HOURS','INVALID_SLOT') then
