@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) redirect("/login?error=missing");
+  if (!email || !password || email.length > 320 || password.length > 1024) redirect("/login?error=missing");
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -16,7 +16,6 @@ export async function signIn(formData: FormData) {
       console.error("Staff login: Supabase sign-in failed", {
         status: error.status,
         code: error.code ?? null,
-        message: error.message,
       });
     }
     const code = error?.message === "Invalid API key" ? "config" : error?.code === "email_not_confirmed" ? "unconfirmed" : "badCredentials";
@@ -27,7 +26,6 @@ export async function signIn(formData: FormData) {
   if (membershipError) {
     console.error("Staff login: membership check failed", {
       code: membershipError.code,
-      message: membershipError.message,
     });
     await supabase.auth.signOut();
     redirect("/login?error=membership");

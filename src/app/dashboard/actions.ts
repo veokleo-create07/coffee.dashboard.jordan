@@ -39,6 +39,15 @@ function berlinDateToday() {
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
+function isIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+function dateRangeDays(startDate: string, endDate: string) {
+  return Math.floor((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / 86_400_000) + 1;
+}
 function zonedMidnightUtc(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   const target = Date.UTC(year, month - 1, day); let guess = target;
@@ -62,7 +71,10 @@ function mapRow(row: ReservationRow): LiveReservation {
     guests: row.guest_count, status: row.status, note: row.special_requests };
 }
 export async function loadReservations(startDate: string, endDate: string): Promise<ReservationLoadResult> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || startDate > endDate) return { ok: false, reason: "unavailable" };
+  // Keep the read surface bounded. The dashboard only needs day, week, and
+  // month windows; rejecting malformed or multi-year ranges also prevents an
+  // authenticated client from accidentally requesting an expensive scan.
+  if (!isIsoDate(startDate) || !isIsoDate(endDate) || startDate > endDate || dateRangeDays(startDate, endDate) > 366) return { ok: false, reason: "unavailable" };
   try {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const exclusive = new Date(`${endDate}T12:00:00Z`); exclusive.setUTCDate(exclusive.getUTCDate() + 1);
