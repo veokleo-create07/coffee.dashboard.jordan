@@ -2,8 +2,9 @@
 -- Staff capacity extension: public bookings retain the configured 26-guest simultaneous limit.
 -- Authorized staff may create one reservation for 1-30 guests even when it overlaps
 -- other bookings. The existing advisory lock serializes all reservation writes.
--- The repository Phase 5 definitions use altstadtliebe-reservation-booking; verify
--- the live public RPC uses the same key before applying this proposal.
+-- Production verification confirmed create_reservation_atomic uses
+-- altstadtliebe-reservation-capacity-v1. Staff writes and the capacity trigger
+-- are aligned to that same key below so all reservation writers serialize together.
 
 create or replace function public.staff_reservation_peak_guests(
   p_starts_at timestamptz, p_ends_at timestamptz, p_guest_count integer,
@@ -35,7 +36,7 @@ create or replace function public.enforce_reservation_simultaneous_capacity()
 returns trigger language plpgsql security definer set search_path = pg_catalog, public as $$
 declare v_capacity integer; v_override boolean; v_exceeded boolean;
 begin
-  perform pg_advisory_xact_lock(hashtextextended('altstadtliebe-reservation-booking', 0));
+  perform pg_advisory_xact_lock(hashtextextended('altstadtliebe-reservation-capacity-v1', 0));
   if new.status not in ('pending','confirmed','arrived','completed') then return new; end if;
   v_override := current_setting('app.staff_rule_override', true) = 'true' and public.staff_reservation_access(true);
   -- A staff RPC may explicitly mark this transaction after verifying staff
@@ -114,7 +115,7 @@ begin
 
   -- Acquire the shared lock before each DML statement so READ COMMITTED takes
   -- a fresh snapshot after any concurrent booking transaction has committed.
-  perform pg_advisory_xact_lock(hashtextextended('altstadtliebe-reservation-booking', 0));
+  perform pg_advisory_xact_lock(hashtextextended('altstadtliebe-reservation-capacity-v1', 0));
 
   if p_action = 'create' then
     if btrim(coalesce(p_customer_name, '')) = '' or char_length(btrim(p_customer_name)) > 160
