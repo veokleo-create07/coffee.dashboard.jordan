@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
+import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
@@ -39,7 +39,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd });
-  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false);
+  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const start = key(date); const end = start;
 
@@ -99,7 +99,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     setError(""); startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
       if (!response.ok) { setError(translatedError(response.code)); return; }
-      setCreating(false); setEditing(false); setConfirmCancel(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
+      setCreating(false); setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
       if (response.reservation) {
         setReservations((current) => current.some((item) => item.id === response.reservation?.id)
           ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
@@ -170,12 +170,15 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary action-arrive" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
         {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
         {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
-        <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}</div>
+        <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{(details.status === "pending" || details.status === "confirmed") ? <><button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button><button className="button-secondary danger-action action-delete" disabled={pending} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />{t("actions.delete")}</button></> : null}</div>
       </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section></footer>
     </aside> : null}</div>
     {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} /> : null}
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
+    </Modal>
+    <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
+      <p className="cancel-confirm-copy">{t("deleteDescription")}</p>
     </Modal>
     <Toast message={message} onDismiss={() => setMessage("")} />
   </>;

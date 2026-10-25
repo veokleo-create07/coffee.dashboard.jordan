@@ -233,6 +233,9 @@
     "exceptionReason": "Reason for exception (at least 10 characters)",
     "saving": "Saving…",
     "cancelTitle": "Cancel this reservation?",
+  "deleteTitle": "Delete this booking?",
+  "deleteDescription": "This booking will be removed from active bookings and retained in the reservation history.",
+  "deleteConfirm": "Delete booking",
     "keep": "Keep reservation",
     "cancelDescription": "This reservation will be marked as cancelled.",
     "capacityRelease": "Its reserved capacity will be released immediately.",
@@ -242,6 +245,7 @@
       "completed": "Mark completed",
       "noShow": "Mark no-show",
       "cancel": "Cancel reservation",
+    "delete": "Delete booking",
       "create": "Create reservation",
       "confirmed": "Confirm reservation",
       "free": "Mark as free"
@@ -253,6 +257,7 @@
       "arrived": "Arrival recorded.",
       "completed": "Visit marked as free.",
       "cancelled": "Reservation cancelled; capacity released.",
+    "deleted": "Booking deleted and capacity released.",
       "no_show": "No-show recorded."
     },
     "errors": {
