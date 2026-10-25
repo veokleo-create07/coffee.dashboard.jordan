@@ -53,14 +53,14 @@ function MonthCalendar({ month, selected, reservations, locale, onSelect }: { mo
 export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [range, setRange] = useState<Range>("day"); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
-  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
+  const [reservations, setReservations] = useState(initial.ok ? initial.reservations.filter((item) => item.status !== "cancelled") : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
   const start = key(bounds.start); const end = key(bounds.end); const selectedKey = key(date);
 
   async function refresh() {
-    const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : [];
+    const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : [];
     setResult(next.ok ? { ...next, reservations: visible } : next);
     if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
     if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
@@ -68,7 +68,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   useEffect(() => {
     if (start >= loadedRange.start && end <= loadedRange.end) return;
     let active = true;
-    void loadReservations(start, end).then((next) => { if (!active) return; const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : []; setResult(next.ok ? { ...next, reservations: visible } : next); if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); } });
+    void loadReservations(start, end).then((next) => { if (!active) return; const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : []; setResult(next.ok ? { ...next, reservations: visible } : next); if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); } });
     return () => { active = false; };
   }, [end, hiddenReservationIds, loadedRange.end, loadedRange.start, start]);
   useEffect(() => {
@@ -80,7 +80,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       const next = await loadReservations(start, end);
       inFlight = false;
       if (!active) return;
-      const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : [];
+      const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : [];
       setResult(next.ok ? { ...next, reservations: visible } : next);
       if (next.ok) {
         setReservations(visible);
@@ -123,10 +123,15 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setReservations((current) => current.filter((item) => item.id !== response.reservation!.id));
         setDetails((current) => current?.id === response.reservation!.id ? null : current);
       } else if (response.reservation) {
-        setReservations((current) => current.some((item) => item.id === response.reservation?.id)
-          ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
-          : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
-        setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
+        if (response.reservation.status === "cancelled") {
+          setReservations((current) => current.filter((item) => item.id !== response.reservation?.id));
+          setDetails((current) => current?.id === response.reservation?.id ? null : current);
+        } else {
+          setReservations((current) => current.some((item) => item.id === response.reservation?.id)
+            ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
+            : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+          setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
+        }
       }
       void refresh();
     });
@@ -149,7 +154,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
     <div className="reservation-toolbar"><div className="range-switcher" aria-label={c("bookings")}><button type="button" className={range === "day" ? "is-active" : ""} onClick={() => setRange("day")}>{t("day")}</button><button type="button" className={range === "week" ? "is-active" : ""} onClick={() => setRange("week")}>{t("week")}</button><button type="button" className={range === "month" ? "is-active" : ""} onClick={() => setRange("month")}>{t("month")}</button></div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
-        <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
+        <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
     {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
     {range === "month" && result.ok ? <MonthCalendar month={date} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
