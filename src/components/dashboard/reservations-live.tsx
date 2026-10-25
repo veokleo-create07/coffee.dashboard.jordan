@@ -14,6 +14,7 @@ const activeStatuses = new Set<ReservationStatus>(["pending", "confirmed", "arri
 const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPACITY_CONFIG: "capacityConfig", PAST: "past", BOOKING_WINDOW: "bookingWindow", GUEST_LIMIT: "guestLimit", CLOSED: "closed", OUTSIDE_HOURS: "outsideHours", INVALID_SLOT: "invalidSlot", RESERVATION_FULL: "full", ABSOLUTE_CAPACITY: "absoluteCapacity", RULE_EXCEPTION_REQUIRED: "exceptionRequired", RULE_EXCEPTION_FORBIDDEN: "exceptionForbidden", NOT_FOUND: "notFound", INVALID_TRANSITION: "invalidTransition", NO_SHOW_TOO_EARLY: "noShowTooEarly", NOT_STAFF: "notStaff", UNAVAILABLE: "unavailable", VISIT_STILL_ACTIVE: "visitStillActive", OCCUPANCY_TIMESTAMP_FORBIDDEN: "occupancyTimestampForbidden" };
 const lateThresholdMs = 15 * 60_000;
 const visitDurationMs = 90 * 60_000;
+const hiddenReservationStorageKey = "altstadtliebe:hidden-reservation-ids";
 function isLate(reservation: LiveReservation, now: number) {
   const scheduled = Date.parse(reservation.startsAt);
   if (reservation.arrivedAt) return Date.parse(reservation.arrivedAt) > scheduled + lateThresholdMs;
@@ -38,7 +39,7 @@ function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: n
 export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
-  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(new Set());
+  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const start = key(date); const end = start;
@@ -103,7 +104,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       if (!response.ok) { setError(translatedError(response.code)); return; }
       setCreating(false); setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
       if (response.reservation && options?.removeFromView) {
-        setHiddenReservationIds((current) => new Set(current).add(response.reservation!.id));
+        setHiddenReservationIds((current) => { const next = new Set(current).add(response.reservation!.id); window.localStorage.setItem(hiddenReservationStorageKey, JSON.stringify([...next])); return next; });
         setReservations((current) => current.filter((item) => item.id !== response.reservation!.id));
         setDetails((current) => current?.id === response.reservation!.id ? null : current);
       } else if (response.reservation) {
