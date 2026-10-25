@@ -128,10 +128,36 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
   function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction * (range === "week" ? 7 : range === "month" ? 30 : 1)); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0], options?: { removeFromView?: boolean; visitTag?: VisitTagId }) {
-    setError(""); startTransition(async () => {
+    setError("");
+    const optimisticId = values.action === "create" ? `optimistic-${Date.now()}` : null;
+    if (optimisticId && values.date && values.time && values.guest) {
+      const optimistic: LiveReservation = {
+        id: optimisticId,
+        reference: "",
+        guest: values.guest.trim(),
+        email: values.email?.trim() || null,
+        phone: values.phone?.trim() || null,
+        date: values.date,
+        time: values.time,
+        startsAt: `${values.date}T${values.time}:00+01:00`,
+        arrivedAt: null,
+        departedAt: null,
+        guests: values.guests ?? 1,
+        status: "confirmed",
+        source: values.source ?? "phone",
+        note: values.note?.trim() || null,
+      };
+      setCreating(false);
+      setReservations((current) => [...current, optimistic].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+    }
+    startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
-      if (!response.ok) { setError(translatedError(response.code)); return; }
-      setCreating(false); setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setArriveTarget(null); setArriveTag(""); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
+      if (!response.ok) {
+        if (optimisticId) setReservations((current) => current.filter((item) => item.id !== optimisticId));
+        setError(translatedError(response.code));
+        return;
+      }
+      setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setArriveTarget(null); setArriveTag(""); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
       if (options?.visitTag && response.reservation) setVisitTags((current) => { const next = { ...current, [response.reservation!.id]: options.visitTag! }; window.localStorage.setItem(visitTagStorageKey, JSON.stringify(next)); return next; });
       if (response.reservation && (response.reservation.status === "completed" || response.reservation.status === "cancelled")) setVisitTags((current) => { if (!current[response.reservation!.id]) return current; const next = { ...current }; delete next[response.reservation!.id]; window.localStorage.setItem(visitTagStorageKey, JSON.stringify(next)); return next; });
       if (response.reservation && options?.removeFromView) {
@@ -145,11 +171,13 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         } else {
           setReservations((current) => current.some((item) => item.id === response.reservation?.id)
             ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
+            : optimisticId && current.some((item) => item.id === optimisticId)
+              ? current.map((item) => item.id === optimisticId ? response.reservation as LiveReservation : item)
             : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
           setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
         }
       }
-      void refresh();
+      window.setTimeout(() => { void refresh(); }, 1200);
     });
   }
   function performStatus(next: NonNullable<Parameters<typeof manageReservation>[0]["status"]>) {

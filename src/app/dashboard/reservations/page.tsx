@@ -9,14 +9,27 @@ function todayInBerlin() {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
+function weekBounds(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  const day = date.getUTCDay();
+  const mondayOffset = (day + 6) % 7;
+  const start = new Date(date);
+  start.setUTCDate(date.getUTCDate() - mondayOffset);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  const format = (value: Date) => value.toISOString().slice(0, 10);
+  return { start: format(start), end: format(end) };
+}
+
 export default async function ReservationsPage({ searchParams }: { searchParams?: Promise<{ date?: string; reservation?: string }> }) {
   const today = todayInBerlin();
   const params = await searchParams;
   const requestedDate = params?.date;
   const requestedReservation = params?.reservation;
   const initialDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : today;
-  // Load only the first visible day. Week and month views fetch their broader
-  // ranges on demand in the client, keeping the initial route response small.
-  const initial = await loadReservations(initialDate, initialDate);
-  return <ReservationsLive today={today} initialStart={initialDate} initialEnd={initialDate} initial={initial} initialDate={initialDate} initialReservationId={requestedReservation} />;
+  // Load the selected week once so moving between adjacent days is immediate.
+  // Wider month ranges still load on demand in the client.
+  const initialRange = weekBounds(initialDate);
+  const initial = await loadReservations(initialRange.start, initialRange.end);
+  return <ReservationsLive today={today} initialStart={initialRange.start} initialEnd={initialRange.end} initial={initial} initialDate={initialDate} initialReservationId={requestedReservation} />;
 }
