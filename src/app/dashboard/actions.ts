@@ -100,7 +100,7 @@ export async function loadCurrentOccupancy(): Promise<OccupancyResult> {
     return { ok: false, reason: "unavailable" };
   }
 }
-const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY", "VISIT_STILL_ACTIVE", "OCCUPANCY_TIMESTAMP_FORBIDDEN"]);
+const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "ABSOLUTE_CAPACITY", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY", "VISIT_STILL_ACTIVE", "OCCUPANCY_TIMESTAMP_FORBIDDEN"]);
 function getErrorCode(error: { message?: string; code?: string }) {
   const first = error.message?.split(":")[0]?.trim() ?? "";
   if (knownErrors.has(first)) return first;
@@ -108,7 +108,7 @@ function getErrorCode(error: { message?: string; code?: string }) {
   return "UNAVAILABLE";
 }
 export async function checkReservationAvailability(input: { date: string; time: string; guests: number; source: BookingSource; excludeId?: string }): Promise<AvailabilityResult> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time) || !Number.isInteger(input.guests) || input.guests < 1 || input.guests > 26) return { ok: false, code: "INVALID_INPUT" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time) || !Number.isInteger(input.guests) || input.guests < 1 || input.guests > 30) return { ok: false, code: "INVALID_INPUT" };
   try {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
     const { data, error } = await supabase.rpc("staff_check_reservation_availability", { p_date: input.date, p_time: input.time, p_guest_count: input.guests, p_booking_source: input.source, p_exclude_reservation_id: input.excludeId ?? null });

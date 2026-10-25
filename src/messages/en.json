@@ -277,7 +277,8 @@
       "reasonRequired": "Enter an exception reason of at least 10 characters.",
       "emailInvalid": "Enter a valid email address.",
       "visitStillActive": "Mark the guest as free before closing this reservation.",
-      "occupancyTimestampForbidden": "Arrival and departure times are recorded automatically. Do not edit them directly."
+      "occupancyTimestampForbidden": "Arrival and departure times are recorded automatically. Do not edit them directly.",
+      "absoluteCapacity": "This reservation exceeds the absolute 30-guest overlapping capacity."
     },
     "actualArrival": "Actual arrival",
     "actualDeparture": "Actual departure",
