@@ -485,3 +485,197 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .reservation-toolbar .search-field input { width: 100%; }
   .overview-grid { grid-template-columns: 1fr; gap: 10px; }
 }
+
+/*
+ * Responsive system
+ *
+ * This is the final responsive layer for the dashboard.  The older global
+ * stylesheet still contains the original desktop rules for backwards
+ * compatibility, so all viewport-specific layout decisions live here.  The
+ * result is one set of predictable tokens instead of a series of shrinking
+ * desktop patches.
+ */
+:root {
+  --dash-gutter: 24px;
+  --dash-sidebar: 214px;
+  --dash-content-pad: 34px;
+  --dash-gap: 16px;
+  --dash-touch: 40px;
+}
+
+html, body { overflow-x: hidden; }
+.dashboard-frame {
+  width: calc(100% - (var(--dash-gutter) * 2));
+  max-width: 1960px;
+  min-height: calc(100dvh - (var(--dash-gutter) * 2));
+  margin: var(--dash-gutter) auto;
+  grid-template-columns: var(--dash-sidebar) minmax(0, 1fr);
+}
+.dashboard-sidebar { top: var(--dash-gutter); height: calc(100dvh - (var(--dash-gutter) * 2)); width: var(--dash-sidebar); }
+.dashboard-main, .dashboard-content, .dashboard-frame > * { min-width: 0; }
+.dashboard-content { padding: 30px var(--dash-content-pad) 40px; }
+.page-intro { min-width: 0; }
+.page-title, .page-description, .panel-heading h2, .guest-primary, .detail-panel-name { overflow-wrap: anywhere; }
+.page-title { font-size: clamp(34px, 2.55vw, 42px); line-height: 1.02; }
+.page-description { font-size: clamp(15px, 1.15vw, 18px); }
+.page-actions, .overview-planning-actions, .reservation-header-actions { min-width: 0; }
+.button-primary, .button-secondary, .button-danger, .button-ghost, .new-booking-button, .date-control, .logout-button { min-height: var(--dash-touch); }
+
+.metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--dash-gap); }
+.metric-card { min-width: 0; min-height: 118px; padding: 19px 20px; }
+.metric-card > * { min-width: 0; }
+.metric-value { line-height: .95; }
+.metric-label, .metric-detail { overflow-wrap: anywhere; }
+
+.overview-grid { grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr); gap: var(--dash-gap); }
+.overview-grid > *, .reservation-workspace > * { min-width: 0; }
+.panel, .reservations-table, .month-calendar, .week-day-card { min-width: 0; }
+.panel-heading { gap: 12px; }
+.data-table-wrap, .reservations-table { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.data-table { min-width: 680px; }
+.overview-table .data-table { min-width: 700px; }
+.guest-primary { min-width: 0; max-width: 22ch; text-overflow: ellipsis; white-space: nowrap; }
+.guest-secondary { min-width: 0; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.reservation-toolbar { min-width: 0; }
+.reservation-toolbar .toolbar-lower { min-width: 0; flex-wrap: wrap; }
+.search-field { min-width: 0; }
+.search-field input { max-width: 100%; }
+.reservation-workspace { grid-template-columns: minmax(0, 1fr); gap: var(--dash-gap); }
+.reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); }
+.reservation-detail-panel { min-width: 0; }
+.detail-panel-body { min-width: 0; overflow-x: hidden; }
+.detail-row, .detail-row > *, .detail-information-card strong { min-width: 0; }
+.detail-row > span, .detail-information-card strong { overflow-wrap: anywhere; }
+.detail-actions { flex-wrap: wrap; }
+
+.week-summary { min-width: 0; }
+.week-day-card { min-width: 0; }
+.month-calendar { overflow-x: auto; }
+.month-calendar-grid { min-width: 600px; }
+
+.modal-card-dialog { width: min(610px, calc(100vw - 40px)); max-height: min(760px, calc(100dvh - 40px)); }
+.modal-card-dialog .modal-body { min-width: 0; overflow-y: auto; }
+.modal-card-dialog .form-grid { min-width: 0; }
+.modal-card-dialog .form-field { min-width: 0; }
+.modal-card-dialog input, .modal-card-dialog select, .modal-card-dialog textarea { max-width: 100%; }
+
+@media (min-width: 1920px) {
+  :root { --dash-gutter: 30px; --dash-content-pad: 42px; --dash-gap: 18px; }
+  .dashboard-content { padding-top: 36px; }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  :root { --dash-gutter: 16px; --dash-sidebar: 196px; --dash-content-pad: 24px; --dash-gap: 12px; }
+  .dashboard-sidebar { padding-inline: 12px; }
+  .dashboard-content { padding-block: 25px 32px; }
+  .metric-card { min-height: 108px; gap: 12px; padding: 15px; }
+  .metric-icon { width: 50px; height: 50px; flex-basis: 50px; }
+  .metric-value { font-size: 27px; }
+  .metric-label { font-size: 11px; }
+  .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+
+/* Tablet: retain the app shell, but give touch controls and content room. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root { --dash-gutter: 12px; --dash-sidebar: 178px; --dash-content-pad: 18px; --dash-gap: 12px; --dash-touch: 42px; }
+  .dashboard-sidebar { padding: 24px 10px 16px; }
+  .brand-wordmark { font-size: 13px; }
+  .nav-link { min-height: 42px; gap: 8px; padding-inline: 9px; font-size: 11px; }
+  .dashboard-content { padding-block: 23px 30px; }
+  .page-title { font-size: 32px; }
+  .page-description { font-size: 15px; }
+  .page-intro { margin-bottom: 17px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-card { min-height: 106px; padding: 16px; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .overview-planning-toolbar, .reservation-toolbar { align-items: stretch; }
+  .overview-planning-toolbar .range-switcher, .reservation-toolbar > .range-switcher { width: min(330px, 100%); }
+  .reservation-toolbar .toolbar-lower { justify-content: flex-start; }
+  .reservation-toolbar .search-field { flex: 1 1 250px; }
+  .reservation-toolbar .search-field input { width: 100%; }
+  .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 320px; }
+  .reservation-detail-panel { max-height: calc(100dvh - 150px); }
+  .data-table { min-width: 650px; }
+  .week-summary { grid-template-columns: repeat(4, minmax(105px, 1fr)); overflow-x: auto; padding-bottom: 3px; }
+  .week-day-card { min-width: 105px; }
+  .month-calendar-grid { min-width: 560px; }
+}
+
+@media (max-width: 767px) {
+  :root { --dash-gutter: 0px; --dash-content-pad: 13px; --dash-gap: 10px; --dash-touch: 44px; }
+  .dashboard-frame { width: 100%; min-height: 100dvh; margin: 0; border-radius: 0; display: block; padding-bottom: calc(63px + env(safe-area-inset-bottom)); }
+  .dashboard-sidebar { display: none; }
+  .dashboard-main { min-height: calc(100dvh - 110px); margin-left: 0; }
+  .dashboard-content { padding: 20px var(--dash-content-pad) 28px; }
+  .mobile-brand { display: flex; }
+  .mobile-navigation { display: flex; }
+  .page-intro { margin-bottom: 16px; }
+  .page-title { font-size: clamp(27px, 8vw, 34px); letter-spacing: -.045em; }
+  .page-description { margin-top: 4px; font-size: 14px; }
+  .page-actions, .overview-planning-actions, .reservation-header-actions { width: 100%; }
+  .overview-planning-toolbar, .reservation-toolbar { align-items: stretch; flex-direction: column; gap: 9px; }
+  .overview-planning-toolbar .range-switcher, .reservation-toolbar > .range-switcher { width: 100%; min-width: 0; }
+  .overview-planning-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .overview-planning-actions .new-booking-button { width: 100%; min-width: 0; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .metric-card { min-height: 102px; gap: 9px; padding: 13px 11px; }
+  .metric-icon { width: 38px; height: 38px; flex-basis: 38px; }
+  .metric-icon svg { width: 18px; height: 18px; }
+  .metric-value { font-size: 23px; }
+  .metric-label { margin-top: 4px; font-size: 11px; line-height: 1.15; }
+  .metric-detail { margin-top: 3px; font-size: 9px; line-height: 1.15; }
+  .overview-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
+  .panel-heading { min-height: 58px; padding: 13px 15px; }
+  .panel-heading h2 { font-size: 15px; }
+  .data-table { min-width: 640px; }
+  .overview-table .data-table { min-width: 670px; }
+  .reservations-table { display: none; }
+  .booking-card-list { display: grid; gap: 8px; border: 0; border-radius: 0; background: transparent; padding: 0; }
+  .reservation-toolbar .toolbar-lower { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: 8px; }
+  .reservation-toolbar .search-field { width: 100%; }
+  .reservation-toolbar .search-field input { width: 100%; }
+  .reservation-toolbar .filter-select { min-width: 0; width: 100%; }
+  .range-switcher > button, .range-button { min-height: 42px; }
+  .reservation-workspace.has-details { grid-template-columns: 1fr; }
+  .reservation-detail-panel { position: fixed; z-index: 60; inset: 0; width: 100%; max-height: none; border: 0; border-radius: 0; }
+  .detail-panel-body { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .detail-row > span, .detail-information-card strong { white-space: normal; }
+  .detail-actions { gap: 8px; }
+  .detail-actions > * { min-height: 44px; }
+  .week-summary { display: flex; overflow-x: auto; gap: 7px; margin-right: calc(var(--dash-content-pad) * -1); padding-right: var(--dash-content-pad); scrollbar-width: none; }
+  .week-summary::-webkit-scrollbar { display: none; }
+  .week-day-card { min-width: 108px; }
+  .month-calendar { padding: 4px; }
+  .month-calendar-grid { min-width: 560px; }
+  .modal-card-dialog, .modal-card-confirm { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); margin: 8px; border-radius: 13px; }
+  .modal-card-dialog .modal-head { padding: 20px 18px 15px; }
+  .modal-card-dialog .modal-body { padding: 18px; }
+  .modal-card-dialog .modal-foot { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .modal-card-dialog .form-grid { grid-template-columns: 1fr; gap: 13px; }
+  .modal-card-dialog .modal-foot { display: grid; grid-template-columns: 1fr; gap: 8px; }
+}
+
+@media (max-width: 430px) {
+  .dashboard-content { padding-inline: 11px; }
+  .mobile-brand { padding-inline: 11px; }
+  .mobile-nav-link { min-width: 52px; padding-inline: 4px; }
+  .overview-planning-actions { grid-template-columns: 1fr; }
+  .reservation-toolbar .toolbar-lower { grid-template-columns: 1fr; }
+  .metric-card { min-height: 98px; padding-inline: 9px; }
+  .metric-icon { width: 34px; height: 34px; flex-basis: 34px; }
+  .metric-value { font-size: 21px; }
+  .metric-label { font-size: 10px; }
+}
+
+@media (max-width: 360px) {
+  .page-title { font-size: 26px; }
+  .metric-grid { gap: 6px; }
+  .metric-card { gap: 6px; padding-inline: 7px; }
+  .metric-value { font-size: 19px; }
+  .metric-detail { font-size: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
