@@ -39,7 +39,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd });
-  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false);
+  const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [capacityRequired, setCapacityRequired] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const start = key(date); const end = start;
 
@@ -91,8 +91,8 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   function submit(values: Parameters<typeof manageReservation>[0]) {
     setError(""); startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
-      if (!response.ok) { setError(translatedError(response.code)); return; }
-      setCreating(false); setEditing(false); setConfirmCancel(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
+      if (!response.ok) { if (response.code === "RULE_EXCEPTION_REQUIRED") { setCapacityRequired(true); setError(""); } else setError(translatedError(response.code)); return; }
+      setCreating(false); setEditing(false); setConfirmCancel(false); setCapacityRequired(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
       await refresh();
     });
   }
@@ -160,7 +160,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}</div>
       </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section></footer>
     </aside> : null}</div>
-    {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} onCheck={checkReservationAvailability} errorFor={translatedError} /> : null}
+    {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} reservations={reservations} error={error} busy={pending} capacityRequired={capacityRequired} onCapacityRequired={() => setCapacityRequired(true)} onClose={() => { setCreating(false); setEditing(false); setCapacityRequired(false); setError(""); }} onSubmit={submit} onCheck={checkReservationAvailability} errorFor={translatedError} /> : null}
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
     </Modal>
@@ -168,36 +168,35 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   </>;
 }
 
-function ReservationEditor({ mode, initial, today, error, busy, onClose, onSubmit, onCheck, errorFor }: {
-  mode: "create" | "edit"; initial: LiveReservation | null; today: string; error: string; busy: boolean; onClose: () => void;
+function ReservationEditor({ mode, initial, today, reservations, error, busy, capacityRequired, onCapacityRequired, onClose, onSubmit, onCheck, errorFor }: {
+  mode: "create" | "edit"; initial: LiveReservation | null; today: string; reservations: LiveReservation[]; error: string; busy: boolean; capacityRequired: boolean; onCapacityRequired: () => void; onClose: () => void;
   onSubmit: (input: Parameters<typeof manageReservation>[0]) => void;
   onCheck: typeof checkReservationAvailability; errorFor: (code: string) => string;
 }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common");
   const [guest, setGuest] = useState(initial?.guest ?? ""); const [email, setEmail] = useState(initial?.email ?? ""); const [phone, setPhone] = useState(initial?.phone ?? ""); const [date, setDate] = useState(initial?.date ?? today); const [time, setTime] = useState(initial?.time ?? "10:00"); const [guests, setGuests] = useState(initial?.guests ?? 2); const [source, setSource] = useState<"phone" | "walk_in">(initial?.source === "walk_in" ? "walk_in" : "phone"); const [note, setNote] = useState(initial?.note ?? "");
-  const [availability, setAvailability] = useState<Awaited<ReturnType<typeof checkReservationAvailability>> | null>(null); const [checking, setChecking] = useState(false); const [override, setOverride] = useState(false); const [reason, setReason] = useState(""); const [formError, setFormError] = useState("");
-  const canOverride = availability?.ok && availability.canOverride && availability.reason !== "PAST";
-  async function checkAvailability() {
-    setChecking(true); setFormError(""); setOverride(false); setAvailability(await onCheck({ date, time, guests, source: mode === "create" ? source : initial?.source ?? "website", excludeId: mode === "edit" ? initial?.id : undefined })); setChecking(false);
-  }
-  const labelError = availability?.ok && !availability.available ? errorFor(availability.reason) : null;
-  function save() {
+  const [checking, setChecking] = useState(false); const [exceptionConfirmed, setExceptionConfirmed] = useState(false); const [reason, setReason] = useState(""); const [formError, setFormError] = useState("");
+  const projectedGuests = reservations.filter((item) => item.id !== initial?.id && item.date === date && activeStatuses.has(item.status) && Date.parse(item.startsAt) < Date.parse(`${date}T${time}:00`) + 90 * 60_000 && Date.parse(item.startsAt) + 90 * 60_000 > Date.parse(`${date}T${time}:00`)).reduce((sum, item) => sum + item.guests, guests);
+  async function save() {
     setFormError("");
     if (!guest.trim() && mode === "create") { setFormError(t("errors.nameRequired")); return; }
     if (mode === "create" && !email.trim() && !phone.trim()) { setFormError(t("errors.contactRequired")); return; }
     if (mode === "create" && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormError(t("errors.emailInvalid")); return; }
-    if (!availability?.ok || (!availability.available && !(canOverride && override && reason.trim().length >= 10))) { setFormError(labelError ?? t("errors.checkFirst")); return; }
-    if (override && reason.trim().length < 10) { setFormError(t("errors.reasonRequired")); return; }
-    onSubmit({ action: mode, id: initial?.id, guest: mode === "create" ? guest : undefined, email: mode === "create" ? email : undefined, phone: mode === "create" ? phone : undefined, date, time, guests, source: mode === "create" ? source : undefined, note, exceptionReason: override ? reason : undefined });
+    if (capacityRequired && (!exceptionConfirmed || reason.trim().length < 10)) { setFormError(t("errors.reasonRequired")); return; }
+    setChecking(true);
+    const availability = await onCheck({ date, time, guests, source: mode === "create" ? source : initial?.source ?? "website", excludeId: mode === "edit" ? initial?.id : undefined });
+    if (!availability.ok) { setChecking(false); setFormError(errorFor(availability.code)); return; }
+    if (!availability.available && (!availability.canOverride || availability.reason === "PAST")) { setChecking(false); setFormError(errorFor(availability.reason)); return; }
+    if (!availability.available && availability.canOverride) { onCapacityRequired(); setChecking(false); if (!exceptionConfirmed) { setFormError(t("capacityWarning", { guests: projectedGuests })); return; } }
+    onSubmit({ action: mode, id: initial?.id, guest: mode === "create" ? guest : undefined, email: mode === "create" ? email : undefined, phone: mode === "create" ? phone : undefined, date, time, guests, source: mode === "create" ? source : undefined, note, exceptionReason: capacityRequired ? reason : undefined });
   }
   return <Modal open title={mode === "create" ? t("createTitle") : t("editTitle")} subtitle={mode === "create" ? t("createSubtitle") : initial?.reference} onClose={onClose} footer={<><button className="button-secondary" disabled={busy} onClick={onClose}>{c("cancel")}</button><button className="button-primary" disabled={busy || checking} onClick={save}>{busy ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : mode === "create" ? t("actions.create") : t("saveChanges")}</button></>}>
-    {mode === "create" ? <div className="source-segmented" role="group" aria-label={t("bookingSource")}><button type="button" className={source === "phone" ? "is-active" : ""} onClick={() => { setSource("phone"); setAvailability(null); }}><Phone size={14} />{c("telephone")}</button><button type="button" className={source === "walk_in" ? "is-active" : ""} onClick={() => { setSource("walk_in"); setAvailability(null); }}><UsersRound size={14} />{c("walkIn")}</button></div> : null}
+    {mode === "create" ? <div className="source-segmented" role="group" aria-label={t("bookingSource")}><button type="button" className={source === "phone" ? "is-active" : ""} onClick={() => setSource("phone")}><Phone size={14} />{c("telephone")}</button><button type="button" className={source === "walk_in" ? "is-active" : ""} onClick={() => setSource("walk_in")}><UsersRound size={14} />{c("walkIn")}</button></div> : null}
     <div className="form-grid">
       {mode === "create" ? <><div className="form-field"><label htmlFor="staffGuest">{c("name")} *</label><input id="staffGuest" autoComplete="name" value={guest} onChange={(e) => setGuest(e.target.value)} maxLength={160} /></div><div className="form-field"><label htmlFor="staffPhone">{c("phone")}</label><input id="staffPhone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} /></div><div className="form-field is-full"><label htmlFor="staffEmail">{c("email")}</label><input id="staffEmail" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={320} /></div></> : null}
-      <div className="form-field"><label htmlFor="staffDate"><CalendarDays size={13} />{c("date")}</label><input id="staffDate" type="date" value={date} onChange={(e) => { setDate(e.target.value); setAvailability(null); }} /></div><div className="form-field"><label htmlFor="staffTime"><Clock3 size={13} />{c("time")}</label><input id="staffTime" type="time" value={time} onChange={(e) => { setTime(e.target.value); setAvailability(null); }} /></div><div className="form-field"><label htmlFor="staffGuests"><UsersRound size={13} />{c("guests")}</label><select id="staffGuests" value={guests} onChange={(e) => { setGuests(Number(e.target.value)); setAvailability(null); }}>{Array.from({ length: 26 }, (_, i) => i + 1).map((number) => <option key={number} value={number}>{number}</option>)}</select></div><div className="form-field is-full"><label htmlFor="staffNote"><Pencil size={13} />{c("note")}</label><textarea id="staffNote" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder={c("requestPlaceholder")} /></div>
+      <div className="form-field"><label htmlFor="staffDate"><CalendarDays size={13} />{c("date")}</label><input id="staffDate" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div><div className="form-field"><label htmlFor="staffTime"><Clock3 size={13} />{c("time")}</label><input id="staffTime" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div><div className="form-field"><label htmlFor="staffGuests"><UsersRound size={13} />{c("guests")}</label><select id="staffGuests" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>{Array.from({ length: 26 }, (_, i) => i + 1).map((number) => <option key={number} value={number}>{number}</option>)}</select></div><div className="form-field is-full"><label htmlFor="staffNote"><Pencil size={13} />{c("note")}</label><textarea id="staffNote" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} placeholder={c("requestPlaceholder")} /></div>
     </div>
-    <div className="availability-check"><button type="button" className="button-secondary" disabled={checking || busy} onClick={checkAvailability}>{checking ? <><LoaderCircle size={14} className="spin" />{t("checking")}</> : <><Clock3 size={14} />{t("checkAvailability")}</>}</button>{availability?.ok ? <p className={availability.available ? "availability-success" : "availability-error"} role="status">{availability.available ? t("availableFor", { duration: availability.duration }) : labelError}</p> : null}{availability && !availability.ok ? <p className="availability-error" role="alert">{errorFor(availability.code)}</p> : null}</div>
-    {!availability?.ok || (availability.ok && !availability.available && canOverride) ? (canOverride ? <div className="exception-panel"><label className="exception-checkbox"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />{t("allowException")}</label><p>{t("exceptionDescription")}</p>{override ? <div className="form-field"><label htmlFor="exceptionReason">{t("exceptionReason")}</label><textarea id="exceptionReason" value={reason} minLength={10} maxLength={1000} onChange={(e) => setReason(e.target.value)} /></div> : null}</div> : null) : null}
+    {capacityRequired ? <div className="exception-panel capacity-warning" role="alert"><p><strong>{t("capacityWarning", { guests: projectedGuests })}</strong></p><p>{t("exceptionDescription")}</p><label className="exception-checkbox"><input type="checkbox" checked={exceptionConfirmed} onChange={(e) => { setExceptionConfirmed(e.target.checked); setFormError(""); }} />{t("allowException")}</label><div className="form-field"><label htmlFor="exceptionReason">{t("exceptionReason")}</label><textarea id="exceptionReason" value={reason} minLength={10} maxLength={1000} onChange={(e) => { setReason(e.target.value); setFormError(""); }} /></div></div> : null}
     {error || formError ? <p className="form-error" role="alert">{error || formError}</p> : null}
   </Modal>;
 }
