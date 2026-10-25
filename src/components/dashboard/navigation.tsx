@@ -10,8 +10,8 @@ import { signOut } from "@/app/dashboard/actions";
 function Brand() {
   const t = useTranslations("Navigation");
   return <Link href="/dashboard" className="brand-lockup group" aria-label={t("brandLabel")}>
-    <Heart className="brand-heart" size={12} strokeWidth={1.8} fill="currentColor" />
-    <span className="brand-wordmark">Altstadtliebe</span>
+    <span className="brand-heart-mark" aria-hidden="true"><Heart className="brand-heart" size={16} strokeWidth={1.8} fill="currentColor" /></span>
+    <span className="brand-wordmark">ALTSTADTLIEBE</span>
     <span className="brand-team">breakfast &amp; lunch</span>
   </Link>;
 }
