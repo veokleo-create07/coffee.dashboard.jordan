@@ -45,6 +45,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .dashboard-main { min-width: 0; margin-left: 0; }
 .brand-lockup { color: var(--ref-espresso); }
+.brand-logo-image { display: block; width: min(100%, 170px); height: auto; mix-blend-mode: multiply; }
 .brand-heart-mark { display: grid; width: 24px; height: 22px; place-items: center; margin-bottom: 3px; }
 .brand-heart-mark .brand-heart { margin-bottom: 0; }
 .brand-heart { width: 18px; height: 18px; margin-bottom: 7px; color: #111; }
@@ -285,6 +286,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .dashboard-main { margin-left: 0; }
   .mobile-brand { display: flex; min-height: 57px; align-items: center; justify-content: space-between; border-color: var(--ref-border); background: var(--ref-surface); padding: 0 14px; }
   .mobile-brand .brand-lockup { flex-direction: row; gap: 8px; }
+  .mobile-brand .brand-logo-image { width: 126px; height: auto; }
   .mobile-brand .brand-heart-mark { width: 15px; height: 15px; margin: 0; }
   .mobile-brand .brand-heart { width: 13px; height: 13px; margin: 0; }
   .mobile-brand .brand-wordmark { font-size: 10px; }

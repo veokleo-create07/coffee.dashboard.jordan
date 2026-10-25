@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, Heart, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { signOut } from "@/app/dashboard/actions";
@@ -10,9 +11,7 @@ import { signOut } from "@/app/dashboard/actions";
 function Brand() {
   const t = useTranslations("Navigation");
   return <Link href="/dashboard" className="brand-lockup group" aria-label={t("brandLabel")}>
-    <span className="brand-heart-mark" aria-hidden="true"><Heart className="brand-heart" size={16} strokeWidth={1.8} fill="currentColor" /></span>
-    <span className="brand-wordmark">ALTSTADTLIEBE</span>
-    <span className="brand-team">breakfast &amp; lunch</span>
+    <Image className="brand-logo-image" src="/altstadtliebe-logo.png" alt="Altstadtliebe breakfast & lunch" width={1254} height={500} priority />
   </Link>;
 }
 
