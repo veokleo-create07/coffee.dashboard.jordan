@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
+import { useReservationRealtime } from "@/lib/dashboard/use-reservation-realtime";
 import { loadReservations, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus } from "@/app/dashboard/actions";
 
 type StatusFilter = "all" | LiveReservation["status"];
@@ -59,12 +60,21 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const bounds = range === "day" ? { start: date, end: date } : range === "week" ? { start: startOfWeek(date), end: endOfWeek(date) } : monthBounds(date);
   const start = key(bounds.start); const end = key(bounds.end); const selectedKey = key(date);
 
+  const refreshRef = useRef<() => void>(() => undefined);
+  const refreshLive = () => { refreshRef.current(); };
+  useReservationRealtime(refreshLive);
+
   async function refresh() {
     const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : [];
     setResult(next.ok ? { ...next, reservations: visible } : next);
     if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
     if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
   }
+  useEffect(() => {
+    refreshRef.current = () => { void refresh(); };
+    // The callback intentionally tracks the latest range and selected detail.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [details, end, hiddenReservationIds, start]);
   useEffect(() => {
     if (start >= loadedRange.start && end <= loadedRange.end) return;
     let active = true;
