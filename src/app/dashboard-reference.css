@@ -412,3 +412,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .modal-card-dialog .modal-foot { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); }
   .modal-card-dialog .availability-check { align-items: flex-start; flex-direction: column; gap: 8px; }
 }
+
+/* Keep the live arrival timeline within the panel's warm surface system. */
+.reservation-detail-panel .detail-timeline { border-color: #e7ded5; background: #f7f3ee; }
+.reservation-detail-panel .detail-timeline > div { background: transparent; }
+.reservation-detail-panel .detail-timeline .visit-timer { display: flex; min-height: 28px; align-items: center; gap: 7px; border-top: 1px solid #e7ded5; color: #8a6f55; font-size: 10px; }
+.reservation-detail-panel .detail-timeline .visit-timer svg { color: #8a6f55; }
+.reservation-detail-panel .detail-timeline .visit-timer.is-overdue { color: var(--ref-danger); }
+.reservation-detail-panel .detail-timeline .visit-timer.is-overdue svg { color: var(--ref-danger); }
