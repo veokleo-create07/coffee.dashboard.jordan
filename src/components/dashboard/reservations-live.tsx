@@ -38,22 +38,23 @@ function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: n
 export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
-  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd });
+  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(new Set());
   const [details, setDetails] = useState<LiveReservation | null>(null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const start = key(date); const end = start;
 
   async function refresh() {
-    const next = await loadReservations(start, end); setResult(next);
-    if (next.ok) { setReservations(next.reservations); setLoadedRange({ start, end }); }
-    if (details && next.ok) setDetails(next.reservations.find((item) => item.id === details.id) ?? null);
+    const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : [];
+    setResult(next.ok ? { ...next, reservations: visible } : next);
+    if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
+    if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
   }
   useEffect(() => {
     if (start >= loadedRange.start && end <= loadedRange.end) return;
     let active = true;
-    void loadReservations(start, end).then((next) => { if (!active) return; setResult(next); if (next.ok) { setReservations(next.reservations); setLoadedRange({ start, end }); } });
+    void loadReservations(start, end).then((next) => { if (!active) return; const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : []; setResult(next.ok ? { ...next, reservations: visible } : next); if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); } });
     return () => { active = false; };
-  }, [end, loadedRange.end, loadedRange.start, start]);
+  }, [end, hiddenReservationIds, loadedRange.end, loadedRange.start, start]);
   useEffect(() => {
     let active = true;
     let inFlight = false;
@@ -63,11 +64,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       const next = await loadReservations(start, end);
       inFlight = false;
       if (!active) return;
-      setResult(next);
+      const visible = next.ok ? next.reservations.filter((item) => !hiddenReservationIds.has(item.id)) : [];
+      setResult(next.ok ? { ...next, reservations: visible } : next);
       if (next.ok) {
-        setReservations(next.reservations);
+        setReservations(visible);
         setLoadedRange({ start, end });
-        setDetails((current) => current ? next.reservations.find((item) => item.id === current.id) ?? null : null);
+        setDetails((current) => current ? visible.find((item) => item.id === current.id) ?? null : null);
       }
     };
     const interval = window.setInterval(() => { void poll(); }, 10_000);
@@ -76,7 +78,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     document.addEventListener("visibilitychange", onFocus);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
-  }, [end, start]);
+  }, [end, hiddenReservationIds, start]);
 
   const periodReservations = reservations.filter((item) => item.date >= start && item.date <= end);
   const shown = periodReservations.filter((item) => {
@@ -95,12 +97,16 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const translatedError = (code: string) => t(`errors.${errorKeys[code] ?? "unavailable"}`);
   const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
   function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction); return next; }); }
-  function submit(values: Parameters<typeof manageReservation>[0]) {
+  function submit(values: Parameters<typeof manageReservation>[0], options?: { removeFromView?: boolean }) {
     setError(""); startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
       if (!response.ok) { setError(translatedError(response.code)); return; }
       setCreating(false); setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
-      if (response.reservation) {
+      if (response.reservation && options?.removeFromView) {
+        setHiddenReservationIds((current) => new Set(current).add(response.reservation!.id));
+        setReservations((current) => current.filter((item) => item.id !== response.reservation!.id));
+        setDetails((current) => current?.id === response.reservation!.id ? null : current);
+      } else if (response.reservation) {
         setReservations((current) => current.some((item) => item.id === response.reservation?.id)
           ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
           : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
@@ -177,7 +183,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
     </Modal>
-    <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
+    <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" }, { removeFromView: true })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
       <p className="cancel-confirm-copy">{t("deleteDescription")}</p>
     </Modal>
     <Toast message={message} onDismiss={() => setMessage("")} />
@@ -198,7 +204,7 @@ function ReservationEditor({ mode, initial, today, error, busy, onClose, onSubmi
     if (mode === "create" && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormError(t("errors.emailInvalid")); return; }
     onSubmit({ action: mode, id: initial?.id, guest: mode === "create" ? guest : undefined, email: mode === "create" ? email : undefined, phone: mode === "create" ? phone : undefined, date, time, guests, source: mode === "create" ? source : undefined, note });
   }
-  return <Modal open title={mode === "create" ? t("createTitle") : t("editTitle")} subtitle={mode === "create" ? t("createSubtitle") : initial?.reference} onClose={onClose} footer={<><button className="button-secondary" disabled={busy} onClick={onClose}>{c("cancel")}</button><button className="button-primary" disabled={busy} onClick={save}>{busy ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : mode === "create" ? t("actions.create") : t("saveChanges")}</button></>}> 
+  return <Modal open title={mode === "create" ? t("createTitle") : t("editTitle")} subtitle={mode === "create" ? t("createSubtitle") : initial?.reference} onClose={onClose} footer={<><button className="button-secondary" disabled={busy} onClick={onClose}>{c("cancel")}</button><button className="button-primary" disabled={busy} onClick={save}>{busy ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : mode === "create" ? t("actions.create") : t("saveChanges")}</button></>}>
     {mode === "create" ? <div className="source-segmented" role="group" aria-label={t("bookingSource")}><button type="button" className={source === "phone" ? "is-active" : ""} onClick={() => setSource("phone")}><Phone size={14} />{c("telephone")}</button><button type="button" className={source === "walk_in" ? "is-active" : ""} onClick={() => setSource("walk_in")}><UsersRound size={14} />{c("walkIn")}</button></div> : null}
     <div className="form-grid">
       {mode === "create" ? <><div className="form-field"><label htmlFor="staffGuest">{c("name")} *</label><input id="staffGuest" autoComplete="name" value={guest} onChange={(e) => setGuest(e.target.value)} maxLength={160} /></div><div className="form-field"><label htmlFor="staffPhone">{c("phone")}</label><input id="staffPhone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} /></div><div className="form-field is-full"><label htmlFor="staffEmail">{c("email")}</label><input id="staffEmail" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={320} /></div></> : null}
