@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Ban, CalendarDays, Check, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
+import { Ban, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { MetricCard, PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
@@ -12,7 +12,7 @@ type StatusFilter = "all" | LiveReservation["status"];
 type Range = "day" | "week" | "month";
 const statusClass: Record<ReservationStatus, string> = { pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", completed: "status-completed", cancelled: "status-cancelled", no_show: "status-no-show" };
 const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const activeStatuses = new Set<ReservationStatus>(["pending", "confirmed", "arrived"]);
+const activeStatuses = new Set<ReservationStatus>(["confirmed", "arrived"]);
 const errorKeys: Record<string, string> = { INVALID_INPUT: "invalidInput", CAPACITY_CONFIG: "capacityConfig", PAST: "past", BOOKING_WINDOW: "bookingWindow", GUEST_LIMIT: "guestLimit", CLOSED: "closed", OUTSIDE_HOURS: "outsideHours", INVALID_SLOT: "invalidSlot", RESERVATION_FULL: "full", ABSOLUTE_CAPACITY: "absoluteCapacity", RULE_EXCEPTION_REQUIRED: "exceptionRequired", RULE_EXCEPTION_FORBIDDEN: "exceptionForbidden", NOT_FOUND: "notFound", INVALID_TRANSITION: "invalidTransition", NO_SHOW_TOO_EARLY: "noShowTooEarly", NOT_STAFF: "notStaff", UNAVAILABLE: "unavailable", VISIT_STILL_ACTIVE: "visitStillActive", OCCUPANCY_TIMESTAMP_FORBIDDEN: "occupancyTimestampForbidden" };
 const lateThresholdMs = 15 * 60_000;
 const visitDurationMs = 90 * 60_000;
@@ -26,7 +26,7 @@ const monthBounds = (date: Date) => ({ start: new Date(date.getFullYear(), date.
 function isLate(reservation: LiveReservation, now: number) {
   const scheduled = Date.parse(reservation.startsAt);
   if (reservation.arrivedAt) return Date.parse(reservation.arrivedAt) > scheduled + lateThresholdMs;
-  return (reservation.status === "pending" || reservation.status === "confirmed") && now > scheduled + lateThresholdMs;
+  return reservation.status === "confirmed" && now > scheduled + lateThresholdMs;
 }
 function timerValue(milliseconds: number) {
   const seconds = Math.floor(Math.abs(milliseconds) / 1000);
@@ -226,7 +226,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
     <div className="reservation-toolbar"><div className="range-switcher" aria-label={c("bookings")}><button type="button" className={range === "day" ? "is-active" : ""} onClick={() => setRange("day")}>{t("day")}</button><button type="button" className={range === "week" ? "is-active" : ""} onClick={() => setRange("week")}>{t("week")}</button><button type="button" className={range === "month" ? "is-active" : ""} onClick={() => setRange("month")}>{t("month")}</button></div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
-        <option value="all">{c("all")}</option>{(["pending", "confirmed", "arrived", "completed", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
+        <option value="all">{c("all")}</option>{(["confirmed", "arrived", "completed", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
     {range === "week" && result.ok ? <WeekSummary start={bounds.start} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
     {range === "month" && result.ok ? <MonthCalendar month={date} selected={selectedKey} reservations={reservations} locale={locale} onSelect={(value) => { setDate(new Date(`${value}T12:00:00`)); setRange("day"); }} /> : null}
@@ -265,11 +265,10 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         </div>
       </div>
       <footer className="reservation-detail-actions"><section className="detail-section detail-actions-section"><h4><CircleCheck size={14} />{t("actionsLabel")}</h4><div className="reservation-management-actions">
-        {details.status === "pending" ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("confirmed")}><Check size={14} />{t("actions.confirmed")}</button> : null}
-        {(details.status === "pending" || details.status === "confirmed") ? <button className="button-secondary action-arrive" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
+        {details.status === "confirmed" ? <button className="button-secondary action-arrive" disabled={pending} onClick={() => performStatus("arrived")}><UserRoundCheck size={14} />{t("actions.arrived")}</button> : null}
         {details.status === "arrived" ? <button className="button-secondary action-free" disabled={pending} onClick={() => performStatus("completed")}><CircleCheck size={14} />{t("actions.free")}</button> : null}
-        {(details.status === "pending" || details.status === "confirmed") && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
-        <div className="detail-secondary-actions">{(details.status === "pending" || details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{details.status === "pending" || details.status === "confirmed" || details.status === "arrived" ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}{details.status !== "cancelled" ? <button className="button-secondary danger-action action-delete" disabled={pending} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />{t("actions.delete")}</button> : null}</div>
+        {details.status === "confirmed" && now >= Date.parse(details.startsAt) + lateThresholdMs ? <button className="button-secondary" disabled={pending} onClick={() => performStatus("no_show")}><UserX size={14} />{t("actions.noShow")}</button> : null}
+        <div className="detail-secondary-actions">{(details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{details.status === "confirmed" || details.status === "arrived" ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}{details.status !== "cancelled" ? <button className="button-secondary danger-action action-delete" disabled={pending} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />{t("actions.delete")}</button> : null}</div>
       </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section></footer>
     </aside> : null}</div>
     <Modal open={Boolean(arriveTarget)} variant="confirm" title={t("visitTagTitle")} subtitle={arriveTarget?.guest} onClose={() => { if (!pending) { setArriveTarget(null); setArriveTag(""); } }} footer={<><button type="button" className="button-secondary" disabled={pending} onClick={() => arriveTarget && submit({ action: "status", id: arriveTarget.id, status: "arrived" })}>{t("visitTagSkip")}</button><button type="button" className="button-primary" disabled={pending || !arriveTag} onClick={() => arriveTarget && submit({ action: "status", id: arriveTarget.id, status: "arrived" }, { visitTag: arriveTag || undefined })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : t("actions.arrived")}</button></>}> <p className="visit-tag-prompt">{t("visitTagDescription")}</p><div className="visit-tag-options">{visitTagIds.map((tag) => <button type="button" key={tag} className={`visit-tag-option${arriveTag === tag ? " is-selected" : ""}`} onClick={() => setArriveTag(tag)}><MapPin size={14} />{t(`visitTags.${tag}`)}</button>)}</div></Modal>

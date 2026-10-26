@@ -68,7 +68,7 @@ function mapRow(row: ReservationRow): LiveReservation {
     phone: row.customer_phone, source: row.booking_source, date: `${value("year")}-${value("month")}-${value("day")}`,
     time: new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(row.starts_at)),
     startsAt: row.starts_at, arrivedAt: row.arrived_at, departedAt: row.departed_at,
-    guests: row.guest_count, status: row.status, note: row.special_requests };
+    guests: row.guest_count, status: row.status === "pending" ? "confirmed" : row.status, note: row.special_requests };
 }
 export async function loadReservations(startDate: string, endDate: string): Promise<ReservationLoadResult> {
   // Keep the read surface bounded. The dashboard only needs day, week, and
