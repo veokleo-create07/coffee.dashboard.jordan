@@ -1,7 +1,7 @@
 {
   "Navigation": {
     "overview": "Übersicht",
-    "reservations": "Reservierungen",
+    "reservations": "Tagesreservierungen",
     "analytics": "Analysen",
     "workspace": "Arbeitsbereich",
     "open": "Heute geöffnet",
@@ -148,12 +148,19 @@
   },
   "Reservations": {
     "eyebrow": "Tisch für Tisch",
-    "title": "Reservierungen",
+    "title": "Tagesreservierungen",
     "visitTagTitle": "Kurzen Besuchshinweis hinzufügen",
     "visitTagDescription": "Wähle einen visuellen Hinweis, damit das Team die Gruppe leichter findet.",
     "visitTagLabel": "Besuchshinweis",
     "visitTagSkip": "Überspringen",
-    "visitTags": { "window": "Fensterseite", "counter": "Tresen", "back": "Hinten", "entrance": "Eingang", "stroller": "Kinderwagen", "birthday": "Geburtstag" },
+    "visitTags": {
+      "window": "Fensterseite",
+      "counter": "Tresen",
+      "back": "Hinten",
+      "entrance": "Eingang",
+      "stroller": "Kinderwagen",
+      "birthday": "Geburtstag"
+    },
     "description": "Der Überblick für gute Gastgebermomente.",
     "day": "Tag",
     "week": "Woche",
@@ -309,7 +316,8 @@
     "selectedCount": "{count} ausgewählt",
     "deleteSelected": "Ausgewählte löschen",
     "bulkDeleteTitle": "Ausgewählte Buchungen löschen?",
-    "bulkDeleteDescription": "Die ausgewählten Buchungen werden storniert und aus der Dashboard-Ansicht entfernt. Sie bleiben in der Supabase-Historie."
+    "bulkDeleteDescription": "Die ausgewählten Buchungen werden storniert und aus der Dashboard-Ansicht entfernt. Sie bleiben in der Supabase-Historie.",
+    "dailyReservations": "Tagesreservierungen"
   },
   "Analytics": {
     "eyebrow": "Ein Gefühl für den Rhythmus",

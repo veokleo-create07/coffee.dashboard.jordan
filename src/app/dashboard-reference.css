@@ -505,6 +505,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .overview-grid .panel-heading { min-height: 62px; }
 .date-controls svg, .reservation-header-actions > svg, .detail-row > svg { color: #171310; stroke-width: 2.2; }
 .reservation-toolbar { display: grid; align-items: center; justify-content: stretch; gap: 10px; margin-top: 2px; }
+.daily-reservations-label { color: var(--ref-espresso); font-size: 13px; font-weight: 700; letter-spacing: .01em; }
 .reservation-toolbar > .range-switcher { width: 330px; min-width: 330px; }
 .reservation-toolbar .toolbar-lower { justify-content: flex-start; }
 .reservation-toolbar .search-field input { width: min(290px, 28vw); }
@@ -688,6 +689,7 @@ html, body { overflow-x: hidden; }
   .reservations-table { display: none; }
   .booking-card-list { display: grid; gap: 8px; border: 0; border-radius: 0; background: transparent; padding: 0; }
   .reservation-toolbar .toolbar-lower { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; gap: 8px; }
+  .daily-reservations-label { font-size: 12px; }
   .reservation-toolbar .search-field { width: 100%; }
   .reservation-toolbar .search-field input { width: 100%; }
   .reservation-toolbar .filter-select { min-width: 0; width: 100%; }

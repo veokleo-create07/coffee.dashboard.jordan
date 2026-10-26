@@ -1,7 +1,7 @@
 {
   "Navigation": {
     "overview": "Overview",
-    "reservations": "Reservations",
+    "reservations": "Daily Reservations",
     "analytics": "Analytics",
     "workspace": "Workspace",
     "open": "Open today",
@@ -148,12 +148,19 @@
   },
   "Reservations": {
     "eyebrow": "Table by table",
-    "title": "Reservations",
+    "title": "Daily Reservations",
     "visitTagTitle": "Add a quick visit tag",
     "visitTagDescription": "Choose one visual cue to help the team find this party during service.",
     "visitTagLabel": "Visit cue",
     "visitTagSkip": "Skip",
-    "visitTags": { "window": "Window side", "counter": "Counter", "back": "Back room", "entrance": "Near entrance", "stroller": "Stroller", "birthday": "Birthday" },
+    "visitTags": {
+      "window": "Window side",
+      "counter": "Counter",
+      "back": "Back room",
+      "entrance": "Near entrance",
+      "stroller": "Stroller",
+      "birthday": "Birthday"
+    },
     "description": "A clear view for thoughtful hosting.",
     "day": "Day",
     "week": "Week",
@@ -309,7 +316,8 @@
     "selectedCount": "{count} selected",
     "deleteSelected": "Delete selected",
     "bulkDeleteTitle": "Delete selected bookings?",
-    "bulkDeleteDescription": "The selected bookings will be cancelled and removed from the dashboard view. They remain in Supabase history."
+    "bulkDeleteDescription": "The selected bookings will be cancelled and removed from the dashboard view. They remain in Supabase history.",
+    "dailyReservations": "Daily reservations"
   },
   "Analytics": {
     "eyebrow": "Finding the rhythm",
