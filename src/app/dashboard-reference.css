@@ -406,6 +406,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-list-column { min-width: 0; }
 .reservation-detail-panel { display: flex; min-width: 0; max-height: calc(100dvh - 168px); flex-direction: column; overflow: hidden; border: 1px solid var(--ref-border); border-radius: 10px; background: var(--ref-surface); }
 .reservation-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--ref-border); padding: 16px; }
+.reservation-detail-header-minimal { min-height: 42px; align-items: center; border-bottom: 0; padding: 8px 12px 0; }
+.reservation-detail-header-minimal .icon-button { margin-left: auto; }
+.reservation-detail-header-minimal + .reservation-detail-scroll { padding-top: 4px; }
 .reservation-detail-heading { min-width: 0; }
 .detail-panel-eyebrow { display: block; color: #655d57; font-size: 10px; font-weight: 650; letter-spacing: .12em; line-height: 1.2; text-transform: uppercase; }
 .detail-panel-reference { display: flex; align-items: center; gap: 6px; margin-top: 5px; color: var(--ref-muted); font-size: 10px; }

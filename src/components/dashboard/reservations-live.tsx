@@ -243,11 +243,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     </> : null}</div>
 
     {details && !editing ? <aside className="reservation-detail-panel" aria-label={t("detailTitle")}>
-      <header className="reservation-detail-header">
-        <div className="reservation-detail-heading">
-          <span className="detail-panel-eyebrow">{t("detailPanelTitle")}</span>
-          <div className="detail-panel-reference"><span>{details.reference}</span><button type="button" className="drawer-menu-button" aria-label={t("moreActions")}><MoreHorizontal size={16} /></button></div>
-        </div>
+      <header className="reservation-detail-header reservation-detail-header-minimal">
         <button type="button" className="icon-button" aria-label={c("close")} onClick={() => { setDetails(null); setError(""); }}><X size={16} /></button>
       </header>
       <div className="reservation-detail-scroll">
