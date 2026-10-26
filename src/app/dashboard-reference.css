@@ -591,7 +591,7 @@ html, body { overflow-x: hidden; }
 .search-field input { max-width: 100%; }
 .reservation-workspace { grid-template-columns: minmax(0, 1fr); gap: var(--dash-gap); }
 .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); }
-.reservation-detail-panel { min-width: 0; }
+.reservation-detail-panel { min-width: 0; height: 680px; max-height: 680px; }
 .detail-panel-body { min-width: 0; overflow-x: hidden; }
 .detail-row, .detail-row > *, .detail-information-card strong { min-width: 0; }
 .detail-row > span, .detail-information-card strong { overflow-wrap: anywhere; }
@@ -622,6 +622,7 @@ html, body { overflow-x: hidden; }
   .metric-value { font-size: 27px; }
   .metric-label { font-size: 11px; }
   .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 340px; }
+  .reservation-detail-panel { height: min(620px, calc(100dvh - 170px)); max-height: none; }
 }
 
 /* Tablet: retain the app shell, but give touch controls and content room. */
@@ -643,7 +644,7 @@ html, body { overflow-x: hidden; }
   .reservation-toolbar .search-field { flex: 1 1 250px; }
   .reservation-toolbar .search-field input { width: 100%; }
   .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 320px; }
-  .reservation-detail-panel { max-height: calc(100dvh - 150px); }
+  .reservation-detail-panel { height: min(600px, calc(100dvh - 150px)); max-height: none; }
   .data-table { min-width: 650px; }
   .week-summary { grid-template-columns: repeat(4, minmax(105px, 1fr)); overflow-x: auto; padding-bottom: 3px; }
   .week-day-card { min-width: 105px; }
@@ -686,7 +687,7 @@ html, body { overflow-x: hidden; }
   .reservation-toolbar .filter-select { min-width: 0; width: 100%; }
   .range-switcher > button, .range-button { min-height: 42px; }
   .reservation-workspace.has-details { grid-template-columns: 1fr; }
-  .reservation-detail-panel { position: fixed; z-index: 60; inset: 0; width: 100%; max-height: none; border: 0; border-radius: 0; }
+  .reservation-detail-panel { position: fixed; z-index: 60; inset: 0; width: 100%; height: auto; max-height: none; border: 0; border-radius: 0; }
   .detail-panel-body { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
   .detail-row > span, .detail-information-card strong { white-space: normal; }
   .detail-actions { gap: 8px; }
