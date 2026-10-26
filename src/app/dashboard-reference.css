@@ -476,7 +476,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .metric-grid { gap: 14px; }
 .metric-card { min-height: 122px; gap: 18px; border-radius: 12px; background: #fffefa; padding: 20px 22px; }
 .metric-icon { width: 58px; height: 58px; flex-basis: 58px; background: #f3efe9; }
-.metric-icon.tone-clay, .metric-icon.tone-sage, .metric-icon.tone-gold, .metric-icon.tone-stone { background: #f1eee8; color: #171310; }
+.metric-icon.tone-clay { background: #f2e1d9; color: #a6533a; }
+.metric-icon.tone-sage { background: #e1e9dc; color: #536b45; }
+.metric-icon.tone-gold { background: #f3e9cc; color: #a87528; }
+.metric-icon.tone-stone { background: #f0dfdd; color: #a94a43; }
 .metric-icon svg { stroke-width: 2.35; }
 .metric-value { font-size: 30px; font-weight: 700; }
 .metric-label { margin-top: 6px; font-size: 12px; }
