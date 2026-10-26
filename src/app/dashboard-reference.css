@@ -476,10 +476,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .metric-grid { gap: 14px; }
 .metric-card { min-height: 122px; gap: 18px; border-radius: 12px; background: #fffefa; padding: 20px 22px; }
 .metric-icon { width: 58px; height: 58px; flex-basis: 58px; background: #f3efe9; }
-.metric-icon.tone-clay { background: #f1ddd2; color: #9a452c; }
-.metric-icon.tone-sage { background: #dcebdc; color: #347047; }
-.metric-icon.tone-gold { background: #f8e8b9; color: #9a6415; }
-.metric-icon.tone-stone { background: #eadfe0; color: #a44443; }
+.metric-icon.tone-clay, .metric-icon.tone-sage, .metric-icon.tone-gold, .metric-icon.tone-stone { background: #f1eee8; color: #171310; }
+.metric-icon svg { stroke-width: 2.35; }
 .metric-value { font-size: 30px; font-weight: 700; }
 .metric-label { margin-top: 6px; font-size: 12px; }
 .metric-detail { margin-top: 5px; font-size: 9px; }
@@ -502,14 +500,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .overview-table, .overview-grid > .panel { min-height: 0; }
 .overview-grid .data-table td { height: 48px; }
 .overview-grid .panel-heading { min-height: 62px; }
-.date-controls svg, .reservation-header-actions > svg { color: var(--ref-espresso); }
-.detail-row:nth-child(1) > svg { color: #a14d31; }
-.detail-row:nth-child(2) > svg { color: #a36a1d; }
-.detail-row:nth-child(3) > svg { color: #347047; }
-.detail-row:nth-child(4) > svg { color: #4b6f9a; }
-.detail-row:nth-child(5) > svg { color: #8c5b32; }
-.detail-row:nth-child(6) > svg { color: #87527d; }
-.detail-row:nth-child(7) > svg { color: #536b82; }
+.date-controls svg, .reservation-header-actions > svg, .detail-row > svg { color: #171310; stroke-width: 2.2; }
 .reservation-toolbar { display: grid; align-items: center; justify-content: stretch; gap: 10px; margin-top: 2px; }
 .reservation-toolbar > .range-switcher { width: 330px; min-width: 330px; }
 .reservation-toolbar .toolbar-lower { justify-content: flex-start; }
