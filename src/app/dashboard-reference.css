@@ -392,6 +392,46 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .reservation-card-select { min-width: 0; }
 .reservation-card-select .reservation-card-time { min-width: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+
+/* Typography refinement: stronger reading contrast without changing the visual language. */
+body { color: #211d1a; font-size: 13.5px; }
+.page-title { font-weight: 720; }
+.page-description { color: #756b63; font-weight: 470; }
+.eyebrow { color: #6e625a; font-weight: 650; }
+.nav-link { color: #49413b; font-size: 13.5px; font-weight: 560; }
+.nav-link svg, .mobile-nav-link svg { stroke-width: 2; }
+.mobile-nav-link { color: #554c45; font-size: 9px; font-weight: 650; }
+.range-date, .date-controls .icon-button, .today-button { color: #302a27; font-weight: 560; }
+.button-primary, .button-secondary, .button-quiet, .button-danger { font-weight: 600; }
+.range-switcher > button, .range-button, .filter-button { color: #49413b; font-weight: 600; }
+.metric-value { font-weight: 720; }
+.metric-label { color: #514943; font-weight: 600; }
+.metric-detail { color: #756b63; font-weight: 520; }
+.data-table th { color: #514943; font-size: 10px; font-weight: 750; letter-spacing: .09em; }
+.data-table td { color: #403934; font-size: 12px; font-weight: 520; }
+.guest-primary { color: #211d1a; font-size: 13px; font-weight: 650; }
+.guest-secondary { color: #756b63; font-size: 10px; font-weight: 520; }
+.status-pill { font-size: 10px; font-weight: 650; }
+.visit-timer, .late-pill { font-weight: 600; }
+.result-count { color: #756b63; font-size: 10px; font-weight: 560; }
+.panel-heading h2 { font-weight: 700; }
+.panel-heading p { color: #756b63; font-size: 11px; font-weight: 520; }
+.search-field input, .select-control { color: #302a27; font-size: 12px; font-weight: 520; }
+.search-field input::placeholder { color: #8a7e74; opacity: 1; }
+.form-field label { color: #39312c; font-size: 12px; font-weight: 650; }
+.form-field input, .form-field select, .form-field textarea { color: #302a27; font-size: 13px; font-weight: 520; }
+.detail-row { color: #39312f; font-size: 13px; font-weight: 520; }
+.detail-hero h3 { font-weight: 720; }
+.detail-request h4, .detail-section h4 { color: #5f554d; font-weight: 700; }
+.detail-request p { color: #403934; font-size: 12.5px; font-weight: 520; }
+.detail-timeline span, .detail-timeline strong { color: #5f554d; font-size: 10px; font-weight: 560; }
+.modal-title { font-weight: 720; }
+.modal-subtitle { color: #756b63; font-size: 11px; font-weight: 520; }
+.source-segmented button { color: #49413b; font-weight: 600; }
+.live-empty-state, .empty-search, .live-data-alert { color: #665b52; font-weight: 520; }
+.sidebar-email, .open-indicator { font-weight: 520; }
+.overview-table .data-table { min-width: 640px; }
+.management-table { min-width: 650px; }
 @media (max-width: 767px) {
   .bulk-selection-bar { justify-content: space-between; padding-inline: 10px; }
   .bulk-selection-bar label { margin-right: 0; }
