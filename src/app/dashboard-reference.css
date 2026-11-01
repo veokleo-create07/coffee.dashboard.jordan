@@ -798,7 +798,19 @@ html, body { overflow-x: hidden; }
   .status-pill { padding: 7px 10px; font-size: 10px; }
   .table-action-button { width: 42px; height: 42px; }
   .select-column input { width: 20px; height: 20px; }
-  .reservation-detail-panel { height: min(720px, calc(100dvh - 150px)); max-height: none; }
+  /* Keep the selected booking fully visible on iPad. The body and timeline scroll
+     inside the panel while the action bar remains reachable at the bottom. */
+  .reservation-detail-panel {
+    position: fixed;
+    z-index: 60;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: min(360px, calc(100vw - 24px));
+    height: auto;
+    max-height: none;
+  }
+  .reservation-detail-actions { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .reservation-detail-actions .button-secondary { min-height: 44px; }
   .modal-card-dialog { width: min(620px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); }
   .modal-card-dialog input, .modal-card-dialog select, .modal-card-dialog textarea { font-size: 16px; }
@@ -827,7 +839,11 @@ html, body { overflow-x: hidden; }
   .overview-planning-toolbar, .reservation-toolbar { align-items: stretch; }
   .overview-planning-toolbar .range-switcher { width: 100%; }
   .reservation-workspace.has-details { grid-template-columns: 1fr; }
-  .reservation-detail-panel { height: min(660px, calc(100dvh - 180px)); }
+  .reservation-detail-panel {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    width: auto;
+  }
   .data-table { min-width: 620px; }
 }
 
