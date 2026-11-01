@@ -765,6 +765,81 @@ html, body { overflow-x: hidden; }
   .metric-label { font-size: 10px; }
 }
 
+/* iPad/Safari touch layer: tuned for the 10th-generation iPad CSS viewports. */
+@media (pointer: coarse) and (min-width: 768px) and (max-width: 1194px) {
+  :root { --dash-touch: 46px; --dash-gap: 14px; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { overscroll-behavior-x: none; }
+  button, a, select, input[type="checkbox"] { touch-action: manipulation; }
+  .dashboard-frame { width: calc(100% - 24px); min-height: calc(100vh - 24px); margin: 12px; }
+  .dashboard-sidebar { top: 12px; height: calc(100vh - 24px); }
+  .dashboard-content { padding: 26px 24px max(34px, env(safe-area-inset-bottom)); }
+  .nav-link { min-height: 48px; gap: 10px; padding-inline: 12px; font-size: 13px; }
+  .nav-link svg { width: 19px; height: 19px; }
+  .page-intro { margin-bottom: 20px; }
+  .page-title { font-size: 36px; }
+  .page-description { font-size: 16px; }
+  .button-primary, .button-secondary, .button-quiet, .button-danger, .date-controls, .range-switcher > button { min-height: 46px; }
+  .icon-button { min-width: 44px; min-height: 44px; }
+  .date-controls { min-height: 46px; }
+  .range-date { min-width: 210px; font-size: 13px; }
+  .metric-card { min-height: 112px; padding: 17px; }
+  .metric-value { font-size: 28px; }
+  .metric-label { font-size: 12px; }
+  .metric-detail { font-size: 10px; }
+  .range-switcher { min-height: 46px; }
+  .range-switcher > button { padding-inline: 18px; font-size: 13px; }
+  .search-field, .select-control { min-height: 46px; }
+  .search-field input, .select-control { font-size: 16px; }
+  .data-table th { height: 48px; padding-inline: 16px; font-size: 10px; }
+  .data-table td { height: 54px; padding: 8px 16px; font-size: 13px; }
+  .guest-primary { font-size: 14px; }
+  .guest-secondary { font-size: 11px; }
+  .status-pill { padding: 7px 10px; font-size: 10px; }
+  .table-action-button { width: 42px; height: 42px; }
+  .select-column input { width: 20px; height: 20px; }
+  .reservation-detail-panel { height: min(720px, calc(100dvh - 150px)); max-height: none; }
+  .reservation-detail-actions .button-secondary { min-height: 44px; }
+  .modal-card-dialog { width: min(620px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); }
+  .modal-card-dialog input, .modal-card-dialog select, .modal-card-dialog textarea { font-size: 16px; }
+  .modal-card-dialog .modal-foot > button { min-height: 46px; }
+  .detail-contact-button { width: 40px; height: 40px; }
+  .visit-tag-option { min-height: 46px; font-size: 13px; }
+  .table-wrap, .reservations-table, .reservation-detail-scroll, .month-calendar { -webkit-overflow-scrolling: touch; }
+}
+
+@supports (height: 100dvh) {
+  @media (pointer: coarse) and (min-width: 768px) and (max-width: 1194px) {
+    .dashboard-frame { min-height: calc(100dvh - 24px); }
+    .dashboard-sidebar { height: calc(100dvh - 24px); }
+  }
+}
+
+@media (pointer: coarse) and (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .dashboard-frame { grid-template-columns: 178px minmax(0, 1fr); }
+  .dashboard-sidebar { padding-inline: 10px; }
+  .dashboard-content { padding-inline: 18px; }
+  .page-title { font-size: 32px; }
+  .page-description { font-size: 15px; }
+  .reservation-header-actions { align-items: stretch; flex-direction: column; }
+  .reservation-header-actions .new-booking-button { width: 100%; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .overview-planning-toolbar, .reservation-toolbar { align-items: stretch; }
+  .overview-planning-toolbar .range-switcher { width: 100%; }
+  .reservation-workspace.has-details { grid-template-columns: 1fr; }
+  .reservation-detail-panel { height: min(660px, calc(100dvh - 180px)); }
+  .data-table { min-width: 620px; }
+}
+
+@media (pointer: coarse) and (min-width: 1024px) and (max-width: 1194px) and (orientation: landscape) {
+  .dashboard-frame { grid-template-columns: 196px minmax(0, 1fr); }
+  .dashboard-sidebar { padding-inline: 12px; }
+  .dashboard-content { padding-inline: 24px; }
+  .reservation-workspace.has-details { grid-template-columns: minmax(0, 1fr) 360px; }
+  .reservation-header-actions { gap: 10px; }
+  .metric-card { padding-inline: 15px; }
+}
+
 @media (max-width: 360px) {
   .page-title { font-size: 26px; }
   .metric-grid { gap: 6px; }

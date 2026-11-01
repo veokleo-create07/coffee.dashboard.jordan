@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { cookies } from "next/headers";
 import de from "@/messages/de.json";
@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   title: { default: "Altstadtliebe · Team", template: "%s · Altstadtliebe" },
   description: "Der interne Arbeitsbereich für das Team von Altstadtliebe.",
   robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
