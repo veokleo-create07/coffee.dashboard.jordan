@@ -158,10 +158,11 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
           setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
         }
       }
-      // Reconcile with Supabase immediately. The optimistic row keeps the UI
-      // responsive while this confirms the persisted record without relying
-      // on realtime or a delayed polling cycle.
-      void refresh();
+      // Keep the successful RPC result in place for creates. A just-committed
+      // insert can briefly be absent from a follow-up read, and replacing the
+      // confirmed row with that stale snapshot makes it flash and disappear.
+      // Realtime/focus polling will reconcile it once the read is current.
+      if (values.action !== "create") void refresh();
     });
   }
   function performStatus(next: NonNullable<Parameters<typeof manageReservation>[0]["status"]>) {
