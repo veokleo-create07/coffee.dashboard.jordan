@@ -427,6 +427,7 @@
     "description": "See occupied tables and current visits.",
     "available": "Available",
     "occupied": "Occupied",
+    "ready": "Ready for the next guests",
     "guests": "guests",
     "remaining": "remaining",
     "empty": "No tables are occupied.",

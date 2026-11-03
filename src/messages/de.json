@@ -427,6 +427,7 @@
     "description": "Belegte Tische und laufende Besuche auf einen Blick.",
     "available": "Frei",
     "occupied": "Belegt",
+    "ready": "Bereit für die nächsten Gäste",
     "guests": "Gäste",
     "remaining": "verbleibend",
     "empty": "Keine Tische sind belegt.",
