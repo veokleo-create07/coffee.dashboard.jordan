@@ -140,8 +140,12 @@ begin
     where reservation_id = p_reservation_id;
   else
     update public.reservation_confirmation_outbox
-    set status = 'failed', locked_at = null, last_error = left(coalesce(p_error, 'EMAIL_DELIVERY_FAILED'), 120),
-        next_attempt_at = now() + make_interval(mins => least(60::double precision, greatest(1::double precision, power(2::double precision, least(v_attempt_count, 6)::double precision))))
+    set status = case when v_attempt_count >= 10 then 'failed' else 'pending' end,
+        locked_at = null, last_error = left(coalesce(p_error, 'EMAIL_DELIVERY_FAILED'), 120),
+        next_attempt_at = case when v_attempt_count >= 10
+          then now() + interval '24 hours'
+          else now()
+        end
     where reservation_id = p_reservation_id;
   end if;
 end;
