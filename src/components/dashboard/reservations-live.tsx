@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Ban, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { PageIntro } from "@/components/dashboard/primitives";
@@ -45,15 +45,29 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations.filter((item) => item.status !== "cancelled") : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
   const [details, setDetails] = useState<LiveReservation | null>(() => initial.ok && initialReservationId ? initial.reservations.find((item) => item.id === initialReservationId && item.status !== "cancelled") ?? null : null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [arriveTarget, setArriveTarget] = useState<LiveReservation | null>(null); const [arriveTag, setArriveTag] = useState<VisitTagId | "">(""); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
   const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
+  const pendingCreatesRef = useRef(new Map<string, { reservation: LiveReservation; expiresAt: number }>());
   const [visitTags, setVisitTags] = useState<Record<string, VisitTagId>>(() => { if (typeof window === "undefined") return {}; try { const saved = JSON.parse(window.localStorage.getItem(visitTagStorageKey) ?? "{}"); return saved && typeof saved === "object" ? Object.fromEntries(Object.entries(saved).filter(([id, tag]) => typeof id === "string" && visitTagIds.includes(tag as VisitTagId))) as Record<string, VisitTagId> : {}; } catch { return {}; } });
   const start = key(date); const end = start;
+
+  const visibleReservations = useCallback((next: ReservationLoadResult) => {
+    if (!next.ok) return [];
+    const visible = next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id));
+    const visibleIds = new Set(visible.map((item) => item.id));
+    const nowMs = Date.now();
+    for (const [id, pendingCreate] of pendingCreatesRef.current) {
+      if (pendingCreate.expiresAt <= nowMs) { pendingCreatesRef.current.delete(id); continue; }
+      if (visibleIds.has(id)) pendingCreatesRef.current.delete(id);
+      else if (pendingCreate.reservation.date >= start && pendingCreate.reservation.date <= end && !hiddenReservationIds.has(id)) visible.push(pendingCreate.reservation);
+    }
+    return visible.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [end, hiddenReservationIds, start]);
 
   const refreshRef = useRef<() => void>(() => undefined);
   const refreshLive = () => { refreshRef.current(); };
   useReservationRealtime(refreshLive);
 
   async function refresh() {
-    const next = await loadReservations(start, end); const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : [];
+    const next = await loadReservations(start, end); const visible = visibleReservations(next);
     setResult(next.ok ? { ...next, reservations: visible } : next);
     if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
     if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
@@ -66,9 +80,9 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   useEffect(() => {
     if (start >= loadedRange.start && end <= loadedRange.end) return;
     let active = true;
-    void loadReservations(start, end).then((next) => { if (!active) return; const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : []; setResult(next.ok ? { ...next, reservations: visible } : next); if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); } });
+    void loadReservations(start, end).then((next) => { if (!active) return; const visible = visibleReservations(next); setResult(next.ok ? { ...next, reservations: visible } : next); if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); } });
     return () => { active = false; };
-  }, [end, hiddenReservationIds, loadedRange.end, loadedRange.start, start]);
+  }, [end, hiddenReservationIds, loadedRange.end, loadedRange.start, start, visibleReservations]);
   useEffect(() => {
     let active = true;
     let inFlight = false;
@@ -78,7 +92,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       const next = await loadReservations(start, end);
       inFlight = false;
       if (!active) return;
-      const visible = next.ok ? next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id)) : [];
+      const visible = visibleReservations(next);
       setResult(next.ok ? { ...next, reservations: visible } : next);
       if (next.ok) {
         setReservations(visible);
@@ -92,7 +106,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     document.addEventListener("visibilitychange", onFocus);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
-  }, [end, hiddenReservationIds, start]);
+  }, [end, hiddenReservationIds, start, visibleReservations]);
 
   const periodReservations = reservations.filter((item) => item.date === start);
   const shown = periodReservations.filter((item) => {
@@ -128,12 +142,14 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         source: values.source ?? "phone",
         note: values.note?.trim() || null,
       };
+      pendingCreatesRef.current.set(optimisticId, { reservation: optimistic, expiresAt: Date.now() + 60_000 });
       setCreating(false);
       setReservations((current) => [...current, optimistic].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
     }
     startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
       if (!response.ok) {
+        if (optimisticId) pendingCreatesRef.current.delete(optimisticId);
         if (optimisticId) setReservations((current) => current.filter((item) => item.id !== optimisticId));
         setError(translatedError(response.code));
         return;
@@ -146,6 +162,8 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setReservations((current) => current.filter((item) => item.id !== response.reservation!.id));
         setDetails((current) => current?.id === response.reservation!.id ? null : current);
       } else if (response.reservation) {
+        if (optimisticId) pendingCreatesRef.current.delete(optimisticId);
+        if (values.action === "create") pendingCreatesRef.current.set(response.reservation.id, { reservation: response.reservation as LiveReservation, expiresAt: Date.now() + 60_000 });
         if (response.reservation.status === "cancelled") {
           setReservations((current) => current.filter((item) => item.id !== response.reservation?.id));
           setDetails((current) => current?.id === response.reservation?.id ? null : current);
