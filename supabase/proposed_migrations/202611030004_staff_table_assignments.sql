@@ -15,6 +15,27 @@ GRANT SELECT ON TABLE public.reservation_table_assignments TO authenticated;
 DROP POLICY IF EXISTS "Staff can read table assignments" ON public.reservation_table_assignments;
 CREATE POLICY "Staff can read table assignments" ON public.reservation_table_assignments FOR SELECT TO authenticated USING (public.staff_reservation_access(false));
 
+CREATE OR REPLACE FUNCTION public.staff_load_table_assignments()
+RETURNS TABLE (reservation_id uuid, table_number integer, assigned_at timestamptz)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.staff_reservation_access(false) THEN
+    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'NOT_STAFF';
+  END IF;
+  RETURN QUERY
+  SELECT a.reservation_id, a.table_number, a.assigned_at
+  FROM public.reservation_table_assignments a
+  ORDER BY a.table_number;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.staff_load_table_assignments() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.staff_load_table_assignments() TO authenticated;
+
+
 CREATE OR REPLACE FUNCTION public.staff_arrive_with_tables(p_reservation_id uuid, p_tables integer[])
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 DECLARE v_actor uuid := auth.uid(); v_row public.reservations%rowtype; v_table integer;

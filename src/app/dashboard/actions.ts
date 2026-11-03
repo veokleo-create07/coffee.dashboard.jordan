@@ -166,11 +166,11 @@ const tableNumbers: TableNumber[] = [1, 2, 3, 4, 5, 6, 7, 11, 22, 33, 44, 55, 10
 export async function loadTableAssignments(): Promise<TableAssignmentResult> {
   try {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
-    const { data, error } = await supabase.from("reservation_table_assignments").select("reservation_id,table_number,assigned_at").order("table_number", { ascending: true });
+    const { data, error } = await supabase.rpc("staff_load_table_assignments");
     if (error) {
       return { ok: true, assignments: [], setupRequired: true };
     }
-    return { ok: true, assignments: (data ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
+    return { ok: true, assignments: (data as Array<{ reservation_id: string; table_number: number; assigned_at: string }> ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
   } catch { return { ok: true, assignments: [], setupRequired: true }; }
 }
 export async function arriveWithTables(id: string, tables: TableNumber[]): Promise<ReservationActionResult> {
