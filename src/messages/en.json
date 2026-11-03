@@ -319,7 +319,11 @@
     "bulkDeleteTitle": "Delete selected bookings?",
     "bulkDeleteDescription": "The selected bookings will be cancelled and removed from the dashboard view. They remain in Supabase history.",
     "dailyReservations": "Daily reservations",
-    "changeTables": "Change tables"
+    "changeTables": "Change tables",
+    "tableSelectTitle": "Select tables",
+    "tableSelectDescription": "Choose the table or tables where this group is sitting. Occupied tables are unavailable.",
+    "save": "Save tables",
+    "tableSetupRequired": "Table assignments need the Supabase migration before they can be saved."
   },
   "Analytics": {
     "eyebrow": "Finding the rhythm",

@@ -32,18 +32,21 @@ BEGIN
   RETURN to_jsonb(v_row);
 END; $$;
 REVOKE ALL ON FUNCTION public.staff_arrive_with_tables(uuid,integer[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.staff_arrive_with_tables(uuid,integer[]) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.staff_assign_reservation_tables(p_reservation_id uuid, p_tables integer[])
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 BEGIN
   IF auth.uid() IS NULL OR NOT public.staff_reservation_access(false) THEN RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='NOT_STAFF'; END IF;
   IF p_tables IS NULL OR cardinality(p_tables) < 1 OR cardinality(p_tables) > 17 OR EXISTS (SELECT 1 FROM unnest(p_tables) t(table_number) WHERE table_number NOT IN (1,2,3,4,5,6,7,11,22,33,44,55,109,110,111,112,113)) THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='INVALID_TABLES'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.reservations WHERE id=p_reservation_id AND status='arrived') THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='INVALID_TRANSITION'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('altstadtliebe-table-assignments-v1',0));
   IF EXISTS (SELECT 1 FROM public.reservation_table_assignments a WHERE a.table_number=ANY(p_tables) AND a.reservation_id<>p_reservation_id) THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='TABLE_OCCUPIED'; END IF;
   DELETE FROM public.reservation_table_assignments WHERE reservation_id=p_reservation_id;
   INSERT INTO public.reservation_table_assignments(reservation_id,table_number) SELECT p_reservation_id, unnest(p_tables);
 END; $$;
 REVOKE ALL ON FUNCTION public.staff_assign_reservation_tables(uuid,integer[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.staff_assign_reservation_tables(uuid,integer[]) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.release_reservation_tables_on_departure() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
 BEGIN

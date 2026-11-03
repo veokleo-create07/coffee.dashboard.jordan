@@ -319,7 +319,11 @@
     "bulkDeleteTitle": "Ausgewählte Buchungen löschen?",
     "bulkDeleteDescription": "Die ausgewählten Buchungen werden storniert und aus der Dashboard-Ansicht entfernt. Sie bleiben in der Supabase-Historie.",
     "dailyReservations": "Tagesreservierungen",
-    "changeTables": "Tische ändern"
+    "changeTables": "Tische ändern",
+    "tableSelectTitle": "Tische auswählen",
+    "tableSelectDescription": "Wähle den Tisch oder die Tische, an denen diese Gruppe sitzt. Belegte Tische sind nicht verfügbar.",
+    "save": "Tische speichern",
+    "tableSetupRequired": "Für Tischzuweisungen muss zuerst die Supabase-Migration ausgeführt werden."
   },
   "Analytics": {
     "eyebrow": "Ein Gefühl für den Rhythmus",
