@@ -13,7 +13,8 @@
     "city": "Lübeck",
     "footer": "Made with love in Lübeck.",
     "internal": "ALTSTADTLIEBE · INTERNAL",
-    "date": "Saturday, October 24, 2026"
+    "date": "Saturday, October 24, 2026",
+    "tables": "Tables"
   },
   "Common": {
     "newReservation": "New reservation",
@@ -317,7 +318,8 @@
     "deleteSelected": "Delete selected",
     "bulkDeleteTitle": "Delete selected bookings?",
     "bulkDeleteDescription": "The selected bookings will be cancelled and removed from the dashboard view. They remain in Supabase history.",
-    "dailyReservations": "Daily reservations"
+    "dailyReservations": "Daily reservations",
+    "changeTables": "Change tables"
   },
   "Analytics": {
     "eyebrow": "Finding the rhythm",
@@ -415,5 +417,15 @@
     "oatCappuccino": "Oat cappuccino",
     "cinnamonRoll": "Cinnamon roll",
     "hotChocolate": "Hot chocolate"
+  },
+  "Tables": {
+    "title": "Tables",
+    "description": "See occupied tables and current visits.",
+    "available": "Available",
+    "occupied": "Occupied",
+    "guests": "guests",
+    "remaining": "remaining",
+    "empty": "No tables are occupied.",
+    "unavailable": "Tables are unavailable right now."
   }
 }

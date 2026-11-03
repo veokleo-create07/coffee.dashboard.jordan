@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
+import { BarChart3, Grid2X2, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { signOut } from "@/app/dashboard/actions";
@@ -21,6 +21,7 @@ export function DashboardNavigation({ email }: { email?: string | null }) {
   const links = [
     { label: t("overview"), href: "/dashboard", icon: LayoutDashboard },
     { label: t("reservations"), href: "/dashboard/reservations", icon: UtensilsCrossed },
+    { label: t("tables"), href: "/dashboard/tables", icon: Grid2X2 },
     { label: t("analytics"), href: "/dashboard/analytics", icon: BarChart3 },
   ];
   return <>

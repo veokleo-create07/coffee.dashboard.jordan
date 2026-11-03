@@ -17,6 +17,9 @@ export type ReservationLoadResult =
   | { ok: true; reservations: LiveReservation[] }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type ReservationActionResult = { ok: true; reservation?: LiveReservation } | { ok: false; code: string };
+export type TableNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 11 | 22 | 33 | 44 | 55 | 109 | 110 | 111 | 112 | 113;
+export type TableAssignment = { reservationId: string; tableNumber: TableNumber; assignedAt: string };
+export type TableAssignmentResult = { ok: true; assignments: TableAssignment[] } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type AvailabilityResult = { ok: true; available: boolean; reason: string; canOverride: boolean; duration: number } | { ok: false; code: string };
 export type OccupancyResult =
   | { ok: true; guests: number; visits: Array<{ id: string; guests: number; arrivedAt: string | null }> }
@@ -152,12 +155,50 @@ export async function loadCurrentOccupancy(): Promise<OccupancyResult> {
     return { ok: false, reason: "unavailable" };
   }
 }
-const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "ABSOLUTE_CAPACITY", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY", "VISIT_STILL_ACTIVE", "OCCUPANCY_TIMESTAMP_FORBIDDEN"]);
+const knownErrors = new Set(["NOT_STAFF", "INVALID_INPUT", "CAPACITY_CONFIG", "PAST", "BOOKING_WINDOW", "GUEST_LIMIT", "CLOSED", "OUTSIDE_HOURS", "INVALID_SLOT", "RESERVATION_FULL", "ABSOLUTE_CAPACITY", "RULE_EXCEPTION_REQUIRED", "RULE_EXCEPTION_FORBIDDEN", "NOT_FOUND", "INVALID_TRANSITION", "NO_SHOW_TOO_EARLY", "VISIT_STILL_ACTIVE", "OCCUPANCY_TIMESTAMP_FORBIDDEN", "INVALID_TABLES", "TABLE_OCCUPIED"]);
 function getErrorCode(error: { message?: string; code?: string }) {
   const first = error.message?.split(":")[0]?.trim() ?? "";
   if (knownErrors.has(first)) return first;
   if (error.code === "42501") return "NOT_STAFF";
   return "UNAVAILABLE";
+}
+const tableNumbers: TableNumber[] = [1, 2, 3, 4, 5, 6, 7, 11, 22, 33, 44, 55, 109, 110, 111, 112, 113];
+export async function loadTableAssignments(): Promise<TableAssignmentResult> {
+  try {
+    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const { data, error } = await supabase.from("reservation_table_assignments").select("reservation_id,table_number,assigned_at").order("table_number", { ascending: true });
+    if (error) return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+    return { ok: true, assignments: (data ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
+  } catch { return { ok: false, reason: "unavailable" }; }
+}
+export async function arriveWithTables(id: string, tables: TableNumber[]): Promise<ReservationActionResult> {
+  try {
+    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const { data, error } = await supabase.rpc("staff_arrive_with_tables", { p_reservation_id: id, p_tables: tables });
+    if (error) return { ok: false, code: getErrorCode(error) };
+    revalidatePath("/dashboard"); revalidatePath("/dashboard/reservations"); revalidatePath("/dashboard/tables");
+    const row = data && typeof data === "object" ? data as ReservationRow : null;
+    return { ok: true, reservation: row ? mapRow(row) : undefined };
+  } catch { return { ok: false, code: "UNAVAILABLE" }; }
+}
+export async function assignReservationTables(id: string, tables: TableNumber[]): Promise<{ ok: true } | { ok: false; code: string }> {
+  try {
+    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const { error } = await supabase.rpc("staff_assign_reservation_tables", { p_reservation_id: id, p_tables: tables });
+    return error ? { ok: false, code: getErrorCode(error) } : { ok: true };
+  } catch { return { ok: false, code: "UNAVAILABLE" }; }
+}
+export type TableBoardItem = { tableNumber: TableNumber; reservation: LiveReservation | null };
+export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardItem[] } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" }> {
+  const assignments = await loadTableAssignments(); if (!assignments.ok) return assignments;
+  try {
+    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const ids = [...new Set(assignments.assignments.map((item) => item.reservationId))];
+    const rows = ids.length ? await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,arrived_at,departed_at,special_requests,status").in("id", ids) : { data: [], error: null };
+    if (rows.error) return { ok: false, reason: rows.error.code === "42501" ? "permission" : "unavailable" };
+    const reservations = new Map(((rows.data ?? []) as ReservationRow[]).map((row) => [row.id, mapRow(row)]));
+    return { ok: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: reservations.get(assignments.assignments.find((item) => item.tableNumber === tableNumber)?.reservationId ?? "") ?? null })) };
+  } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function checkReservationAvailability(input: { date: string; time: string; guests: number; source: BookingSource; excludeId?: string }): Promise<AvailabilityResult> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time) || !Number.isInteger(input.guests) || input.guests < 1 || input.guests > 30) return { ok: false, code: "INVALID_INPUT" };

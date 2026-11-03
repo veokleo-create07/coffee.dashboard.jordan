@@ -13,7 +13,8 @@
     "city": "Lübeck",
     "footer": "Mit Liebe in Lübeck.",
     "internal": "ALTSTADTLIEBE · INTERN",
-    "date": "Samstag, 24. Oktober 2026"
+    "date": "Samstag, 24. Oktober 2026",
+    "tables": "Tische"
   },
   "Common": {
     "newReservation": "Neue Reservierung",
@@ -317,7 +318,8 @@
     "deleteSelected": "Ausgewählte löschen",
     "bulkDeleteTitle": "Ausgewählte Buchungen löschen?",
     "bulkDeleteDescription": "Die ausgewählten Buchungen werden storniert und aus der Dashboard-Ansicht entfernt. Sie bleiben in der Supabase-Historie.",
-    "dailyReservations": "Tagesreservierungen"
+    "dailyReservations": "Tagesreservierungen",
+    "changeTables": "Tische ändern"
   },
   "Analytics": {
     "eyebrow": "Ein Gefühl für den Rhythmus",
@@ -415,5 +417,15 @@
     "oatCappuccino": "Hafer-Cappuccino",
     "cinnamonRoll": "Zimtschnecke",
     "hotChocolate": "Heiße Schokolade"
+  },
+  "Tables": {
+    "title": "Tische",
+    "description": "Belegte Tische und laufende Besuche auf einen Blick.",
+    "available": "Frei",
+    "occupied": "Belegt",
+    "guests": "Gäste",
+    "remaining": "verbleibend",
+    "empty": "Keine Tische sind belegt.",
+    "unavailable": "Tische sind gerade nicht verfügbar."
   }
 }
