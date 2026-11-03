@@ -21,6 +21,10 @@ export type AvailabilityResult = { ok: true; available: boolean; reason: string;
 export type OccupancyResult =
   | { ok: true; guests: number; visits: Array<{ id: string; guests: number; arrivedAt: string | null }> }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
+export type AnalyticsPeriod = "day" | "week" | "month";
+export type AnalyticsResult =
+  | { ok: true; period: AnalyticsPeriod; startDate: string; endDate: string; totals: { reservations: number; guests: number; cancellations: number; noShows: number; arrivals: number; completed: number }; trend: Array<{ date: string; reservations: number; guests: number }>; hours: Array<{ hour: number; reservations: number }>; sources: Array<{ source: BookingSource; reservations: number; guests: number }> }
+  | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type ReservationMutation = {
   action: "create" | "edit" | "status"; id?: string; guest?: string; email?: string; phone?: string;
   guests?: number; date?: string; time?: string; note?: string; source?: "phone" | "walk_in";
@@ -58,6 +62,14 @@ function zonedMidnightUtc(date: string) {
   }
   return new Date(guess).toISOString();
 }
+function berlinParts(iso: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(iso));
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
+  return { date: `${value("year")}-${value("month")}-${value("day")}`, hour: Number(value("hour")) };
+}
+function addDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10);
+}
 async function verifiedStaff() {
   return (await getStaffContext())?.supabase ?? null;
 }
@@ -86,6 +98,34 @@ export async function loadReservations(startDate: string, endDate: string): Prom
       rows.push(...((data ?? []) as ReservationRow[])); if ((data?.length ?? 0) < 1000) break;
     }
     return { ok: true, reservations: rows.map(mapRow) };
+  } catch { return { ok: false, reason: "unavailable" }; }
+}
+export async function loadAnalytics(period: AnalyticsPeriod, anchorDate: string): Promise<AnalyticsResult> {
+  if (!["day", "week", "month"].includes(period) || !isIsoDate(anchorDate)) return { ok: false, reason: "unavailable" };
+  const startDate = period === "month" ? `${anchorDate.slice(0, 7)}-01` : period === "week" ? addDays(anchorDate, -(new Date(`${anchorDate}T12:00:00Z`).getUTCDay() + 6) % 7) : anchorDate;
+  const endDate = period === "month" ? addDays(startDate, new Date(Date.UTC(Number(startDate.slice(0, 4)), Number(startDate.slice(5, 7)), 0)).getUTCDate() - 1) : addDays(startDate, period === "week" ? 6 : 0);
+  if (dateRangeDays(startDate, endDate) > 366) return { ok: false, reason: "unavailable" };
+  try {
+    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const exclusive = addDays(endDate, 1);
+    const rows: Array<{ booking_source: BookingSource; guest_count: number; starts_at: string; arrived_at: string | null; status: ReservationStatus }> = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.from("reservations").select("booking_source,guest_count,starts_at,arrived_at,status").gte("starts_at", zonedMidnightUtc(startDate)).lt("starts_at", zonedMidnightUtc(exclusive)).order("starts_at", { ascending: true }).range(offset, offset + 999);
+      if (error) return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+      rows.push(...((data ?? []) as typeof rows)); if ((data?.length ?? 0) < 1000) break;
+    }
+    const trend = new Map<string, { reservations: number; guests: number }>();
+    const hours = new Map<number, number>();
+    const sourceMap = new Map<BookingSource, { reservations: number; guests: number }>([["website", { reservations: 0, guests: 0 }], ["phone", { reservations: 0, guests: 0 }], ["walk_in", { reservations: 0, guests: 0 }]]);
+    let cancellations = 0, noShows = 0, arrivals = 0, completed = 0, guests = 0;
+    for (const row of rows) {
+      const parts = berlinParts(row.starts_at); const day = trend.get(parts.date) ?? { reservations: 0, guests: 0 }; day.reservations += 1; day.guests += row.guest_count; trend.set(parts.date, day);
+      hours.set(parts.hour, (hours.get(parts.hour) ?? 0) + 1);
+      const source = sourceMap.get(row.booking_source) ?? { reservations: 0, guests: 0 }; source.reservations += 1; source.guests += row.guest_count; sourceMap.set(row.booking_source, source);
+      guests += row.guest_count; if (row.status === "cancelled") cancellations += 1; if (row.status === "no_show") noShows += 1; if (row.arrived_at) arrivals += 1; if (row.status === "completed") completed += 1;
+    }
+    const trendRows = Array.from({ length: dateRangeDays(startDate, endDate) }, (_, index) => { const date = addDays(startDate, index); return { date, ...(trend.get(date) ?? { reservations: 0, guests: 0 }) }; });
+    return { ok: true, period, startDate, endDate, totals: { reservations: rows.length, guests, cancellations, noShows, arrivals, completed }, trend: trendRows, hours: Array.from(hours, ([hour, reservations]) => ({ hour, reservations })).sort((a, b) => a.hour - b.hour), sources: Array.from(sourceMap, ([source, values]) => ({ source, ...values })) };
   } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function getOverviewReservations() {

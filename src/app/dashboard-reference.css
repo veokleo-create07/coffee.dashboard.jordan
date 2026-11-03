@@ -867,3 +867,30 @@ html, body { overflow-x: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Live analytics */
+.analytics-live-toolbar { display: flex; align-items: end; gap: 12px; margin: 0 0 18px; }
+.analytics-live-toolbar label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .02em; }
+.analytics-live-toolbar select, .analytics-live-toolbar input { min-height: 40px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 0 11px; color: var(--ink); font: inherit; font-size: 12px; }
+.analytics-live-range { margin-left: auto; color: var(--muted); font-size: 11px; }
+.analytics-live-status, .analytics-live-note { color: var(--muted); font-size: 11px; }
+.analytics-live-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.analytics-live-metrics .metric-card { min-width: 0; }
+.analytics-live-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 16px; margin-bottom: 16px; }
+.analytics-live-panel { min-width: 0; }
+.analytics-live-bars { display: flex; height: 210px; align-items: end; gap: 7px; padding: 20px 18px 0; border-bottom: 1px solid var(--line); }
+.analytics-live-bar-group { display: flex; min-width: 0; flex: 1; height: 100%; flex-direction: column; align-items: center; justify-content: end; gap: 5px; color: var(--muted); font-size: 9px; }
+.analytics-live-bar-group i { width: min(28px, 80%); min-height: 3px; border-radius: 5px 5px 0 0; background: var(--espresso); }
+.analytics-live-bar-group small { font-size: 9px; }
+.analytics-live-hours, .analytics-live-sources { display: grid; gap: 12px; padding: 18px; }
+.analytics-live-hour, .analytics-live-source { display: grid; grid-template-columns: 48px minmax(0, 1fr) 24px; align-items: center; gap: 10px; color: var(--muted); font-size: 10px; }
+.analytics-live-hour div, .analytics-live-source div { height: 7px; overflow: hidden; border-radius: 8px; background: var(--line-soft); }
+.analytics-live-hour i, .analytics-live-source i { display: block; height: 100%; border-radius: inherit; background: var(--espresso); }
+.analytics-live-source i { background: var(--clay); }
+.analytics-live-hour b, .analytics-live-source b { color: var(--ink); font-size: 11px; text-align: right; }
+.analytics-live-no-data { margin: 0; padding: 0 18px 18px; color: var(--muted); font-size: 11px; }
+.analytics-live-empty { display: grid; min-height: 260px; place-items: center; align-content: center; gap: 10px; color: var(--muted); }
+.analytics-live-empty p { margin: 0; font-size: 13px; }
+.analytics-live-note { margin: 16px 0 0; }
+@media (max-width: 1200px) { .analytics-live-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .analytics-live-toolbar { align-items: stretch; flex-wrap: wrap; } .analytics-live-toolbar label { flex: 1 1 140px; } .analytics-live-range { flex-basis: 100%; margin-left: 0; } .analytics-live-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .analytics-live-grid { grid-template-columns: 1fr; gap: 12px; } .analytics-live-bars { height: 170px; gap: 3px; padding-inline: 10px; } .analytics-live-bar-group i { width: 70%; } }
