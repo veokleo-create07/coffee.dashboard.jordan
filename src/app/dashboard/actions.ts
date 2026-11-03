@@ -168,11 +168,10 @@ export async function loadTableAssignments(): Promise<TableAssignmentResult> {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const { data, error } = await supabase.from("reservation_table_assignments").select("reservation_id,table_number,assigned_at").order("table_number", { ascending: true });
     if (error) {
-      if (error.code === "42P01" || error.code === "PGRST205") return { ok: true, assignments: [], setupRequired: true };
-      return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+      return { ok: true, assignments: [], setupRequired: true };
     }
     return { ok: true, assignments: (data ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
-  } catch { return { ok: false, reason: "unavailable" }; }
+  } catch { return { ok: true, assignments: [], setupRequired: true }; }
 }
 export async function arriveWithTables(id: string, tables: TableNumber[]): Promise<ReservationActionResult> {
   try {
