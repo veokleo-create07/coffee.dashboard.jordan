@@ -18,11 +18,19 @@ begin
     raise exception 'staff_manage_reservation function was not found';
   end if;
 
-  v_updated := regexp_replace(
+  v_updated := replace(
     v_source,
-    $pattern$[[:space:]]+or[[:space:]]+\(nullif\(btrim\(p_customer_email\),[[:space:]]*''\)[[:space:]]+is[[:space:]]+null[[:space:]]+and[[:space:]]+nullif\(btrim\(p_customer_phone\),[[:space:]]*''\)[[:space:]]+is[[:space:]]+null\)$pattern$,
-    '',
-    'g'
+    $needle$
+       or (
+         nullif(btrim(p_customer_email), '') is null
+         and nullif(btrim(p_customer_phone), '') is null
+       )$needle$,
+    ''
+  );
+  v_updated := replace(
+    v_updated,
+    $needle$or (nullif(btrim(p_customer_email), '') is null and nullif(btrim(p_customer_phone), '') is null)$needle$,
+    ''
   );
 
   if v_updated = v_source then
