@@ -158,7 +158,10 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
           setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
         }
       }
-      window.setTimeout(() => { void refresh(); }, 1200);
+      // Reconcile with Supabase immediately. The optimistic row keeps the UI
+      // responsive while this confirms the persisted record without relying
+      // on realtime or a delayed polling cycle.
+      void refresh();
     });
   }
   function performStatus(next: NonNullable<Parameters<typeof manageReservation>[0]["status"]>) {
