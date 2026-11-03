@@ -143,7 +143,6 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         note: values.note?.trim() || null,
       };
       pendingCreatesRef.current.set(optimisticId, { reservation: optimistic, expiresAt: Date.now() + 60_000 });
-      setCreating(false);
       setReservations((current) => [...current, optimistic].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
     }
     startTransition(async () => {
@@ -154,6 +153,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setError(translatedError(response.code));
         return;
       }
+      if (values.action === "create") setCreating(false);
       setEditing(false); setConfirmCancel(false); setConfirmDelete(false); setArriveTarget(null); setArriveTag(""); setMessage(t(`success.${values.action === "status" ? values.status : values.action}`));
       if (options?.visitTag && response.reservation) setVisitTags((current) => { const next = { ...current, [response.reservation!.id]: options.visitTag! }; window.localStorage.setItem(visitTagStorageKey, JSON.stringify(next)); return next; });
       if (response.reservation && (response.reservation.status === "completed" || response.reservation.status === "cancelled")) setVisitTags((current) => { if (!current[response.reservation!.id]) return current; const next = { ...current }; delete next[response.reservation!.id]; window.localStorage.setItem(visitTagStorageKey, JSON.stringify(next)); return next; });
