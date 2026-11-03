@@ -268,7 +268,6 @@ function ReservationEditor({ mode, initial, today, error, busy, onClose, onSubmi
   function save() {
     setFormError("");
     if (!guest.trim() && mode === "create") { setFormError(t("errors.nameRequired")); return; }
-    if (mode === "create" && !email.trim() && !phone.trim()) { setFormError(t("errors.contactRequired")); return; }
     if (mode === "create" && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormError(t("errors.emailInvalid")); return; }
     onSubmit({ action: mode, id: initial?.id, guest: mode === "create" ? guest : undefined, email: mode === "create" ? email : undefined, phone: mode === "create" ? phone : undefined, date, time, guests, source: mode === "create" ? source : undefined, note });
   }
