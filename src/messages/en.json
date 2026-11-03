@@ -430,6 +430,7 @@
     "guests": "guests",
     "remaining": "remaining",
     "empty": "No tables are occupied.",
-    "unavailable": "Tables are unavailable right now."
+    "unavailable": "Tables are unavailable right now.",
+    "setupRequired": "Table assignment storage is not connected yet. Run the Supabase migration to enable live assignments."
   }
 }

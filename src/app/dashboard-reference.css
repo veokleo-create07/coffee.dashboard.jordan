@@ -913,3 +913,4 @@ html, body { overflow-x: hidden; }
 .tables-empty, .tables-empty-note { color: var(--muted); font-size: 13px; }
 @media (max-width: 1100px) { .tables-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .tables-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; } .table-card { min-height: 125px; padding: 13px; } }
+.tables-setup-note { margin-bottom: 16px; border: 1px solid #e5d2b9; border-radius: 10px; background: #fbf4e8; padding: 11px 14px; color: #806044; font-size: 12px; }

@@ -19,7 +19,7 @@ export type ReservationLoadResult =
 export type ReservationActionResult = { ok: true; reservation?: LiveReservation } | { ok: false; code: string };
 export type TableNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 11 | 22 | 33 | 44 | 55 | 109 | 110 | 111 | 112 | 113;
 export type TableAssignment = { reservationId: string; tableNumber: TableNumber; assignedAt: string };
-export type TableAssignmentResult = { ok: true; assignments: TableAssignment[] } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
+export type TableAssignmentResult = { ok: true; assignments: TableAssignment[]; setupRequired?: boolean } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type AvailabilityResult = { ok: true; available: boolean; reason: string; canOverride: boolean; duration: number } | { ok: false; code: string };
 export type OccupancyResult =
   | { ok: true; guests: number; visits: Array<{ id: string; guests: number; arrivedAt: string | null }> }
@@ -167,7 +167,10 @@ export async function loadTableAssignments(): Promise<TableAssignmentResult> {
   try {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const { data, error } = await supabase.from("reservation_table_assignments").select("reservation_id,table_number,assigned_at").order("table_number", { ascending: true });
-    if (error) return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+    if (error) {
+      if (error.code === "42P01" || error.code === "PGRST205") return { ok: true, assignments: [], setupRequired: true };
+      return { ok: false, reason: error.code === "42501" ? "permission" : "unavailable" };
+    }
     return { ok: true, assignments: (data ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
   } catch { return { ok: false, reason: "unavailable" }; }
 }
@@ -189,7 +192,7 @@ export async function assignReservationTables(id: string, tables: TableNumber[])
   } catch { return { ok: false, code: "UNAVAILABLE" }; }
 }
 export type TableBoardItem = { tableNumber: TableNumber; reservation: LiveReservation | null };
-export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardItem[] } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" }> {
+export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardItem[]; setupRequired?: boolean } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" }> {
   const assignments = await loadTableAssignments(); if (!assignments.ok) return assignments;
   try {
     const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
@@ -197,7 +200,7 @@ export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardIt
     const rows = ids.length ? await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,arrived_at,departed_at,special_requests,status").in("id", ids) : { data: [], error: null };
     if (rows.error) return { ok: false, reason: rows.error.code === "42501" ? "permission" : "unavailable" };
     const reservations = new Map(((rows.data ?? []) as ReservationRow[]).map((row) => [row.id, mapRow(row)]));
-    return { ok: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: reservations.get(assignments.assignments.find((item) => item.tableNumber === tableNumber)?.reservationId ?? "") ?? null })) };
+    return { ok: true, setupRequired: assignments.setupRequired, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: reservations.get(assignments.assignments.find((item) => item.tableNumber === tableNumber)?.reservationId ?? "") ?? null })) };
   } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function checkReservationAvailability(input: { date: string; time: string; guests: number; source: BookingSource; excludeId?: string }): Promise<AvailabilityResult> {

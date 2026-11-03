@@ -430,6 +430,7 @@
     "guests": "Gäste",
     "remaining": "verbleibend",
     "empty": "Keine Tische sind belegt.",
-    "unavailable": "Tische sind gerade nicht verfügbar."
+    "unavailable": "Tische sind gerade nicht verfügbar.",
+    "setupRequired": "Die Tischzuweisung ist noch nicht verbunden. Führe die Supabase-Migration aus, um Live-Zuweisungen zu aktivieren."
   }
 }
