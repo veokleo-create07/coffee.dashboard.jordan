@@ -169,15 +169,23 @@ function getErrorCode(error: { message?: string; code?: string }) {
   return "UNAVAILABLE";
 }
 const tableNumbers: TableNumber[] = [1, 2, 3, 4, 5, 6, 7, 11, 22, 33, 44, 55, 109, 110, 111, 112, 113];
+function tableReadFailure(error: { code?: string }) {
+  if (error.code === "42501") return { ok: false as const, reason: "permission" as const };
+  // PostgREST uses PGRST202 when an RPC is not present. The relation/function
+  // errors below cover direct Postgres responses as well, so an unapplied
+  // optional migration remains distinguishable from a real outage.
+  if (["PGRST202", "42883", "42P01"].includes(error.code ?? "")) return null;
+  return { ok: false as const, reason: "unavailable" as const };
+}
 export async function loadTableAssignments(): Promise<TableAssignmentResult> {
   try {
     const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const { data, error } = await supabase.rpc("staff_load_table_assignments");
     if (error) {
-      return { ok: true, assignments: [], setupRequired: true };
+      return tableReadFailure(error) ?? { ok: true, assignments: [], setupRequired: true };
     }
     return { ok: true, assignments: (data as Array<{ reservation_id: string; table_number: number; assigned_at: string }> ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at })) };
-  } catch { return { ok: true, assignments: [], setupRequired: true }; }
+  } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function arriveWithTables(id: string, tables: TableNumber[]): Promise<ReservationActionResult> {
   try {
@@ -200,7 +208,9 @@ export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardIt
   try {
     const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const assignmentRows = await supabase.rpc("staff_load_table_assignments");
-    if (assignmentRows.error) return { ok: true, setupRequired: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: null })) };
+    if (assignmentRows.error) {
+      return tableReadFailure(assignmentRows.error) ?? { ok: true, setupRequired: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: null })) };
+    }
     const assignments = (assignmentRows.data as Array<{ reservation_id: string; table_number: number; assigned_at: string }> ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at }));
     const ids = [...new Set(assignments.map((item) => item.reservationId))];
     const rows = ids.length ? await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,arrived_at,departed_at,special_requests,status").in("id", ids) : { data: [], error: null };

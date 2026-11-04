@@ -9,7 +9,7 @@ Private staff dashboard foundation for Altstadtliebe Café in Lübeck. This app 
 3. Copy `.env.example` to `.env.local` and add the existing project's Supabase project URL and anon/publishable key.
 4. Run `npm run dev` and open `http://localhost:3000`.
 
-The required server-only values are `SUPABASE_URL` and `SUPABASE_ANON_KEY`. They are not prefixed with `NEXT_PUBLIC_`, and the app does not create a browser Supabase client. Never add a service-role key to this application. Database access must be governed by Supabase RLS.
+The required server-only values are `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Realtime also requires the matching `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` values for the browser client. Never add a service-role key to this application. Database access must be governed by Supabase RLS.
 
 ## Staff access
 
@@ -17,7 +17,7 @@ Login uses Supabase Auth email/password. There is no public registration flow. A
 
 The proposed migrations are not executed by this repository. Apply `202610240001_staff_members.sql` first if it has not already been applied, then review and apply `202610240002_staff_reservation_read_access.sql` to grant staff read-only access through RLS. The latter adds no reservation write permissions. If the read policy is not applied, the app displays a localized permission message and does not fall back to mock reservation data.
 
-The shared reservation schema has no phone number or booking-source columns and supports `pending`, `confirmed`, `cancelled`, and `completed` statuses. The dashboard displays those stored statuses and does not infer arrival, seating, no-show, telephone, or walk-in details. Analytics remain visibly unavailable until connected to real data.
+The dashboard reads the shared reservation schema through RLS and the existing staff RPCs. It preserves stored phone, source, arrival, departure, no-show, and status data, and calculates Analytics from live reservation rows. Table assignments are optional and require their proposed Supabase migration before the Tables page can show live occupancy.
 
 ## Commands
 

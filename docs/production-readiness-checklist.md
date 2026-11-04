@@ -16,11 +16,12 @@ deployed Supabase project and a real staff account.
   to Supabase audit/history queries.
 - Bulk selection and audited cancellation are available on Overview and
   Reservations.
-- Realtime reservation refresh was added with a 250 ms coalescing debounce.
-  Existing focus, visibility, and 10-second polling refreshes remain as a
-  fallback.
-- `npm audit --omit=dev --audit-level=high` reports no high-severity production
-  dependency vulnerabilities.
+- Realtime reservation refresh uses a 250 ms coalescing debounce. Focus and
+  visibility refreshes remain active, with a 60-second safety poll when
+  Realtime is connected (30 seconds while it is unavailable).
+- Dependency advisories must be checked with the command below in an
+  environment that can reach the npm advisory service; a failed network
+  request is not evidence of a clean audit.
 
 ## Run before release
 
@@ -43,7 +44,7 @@ git diff --check
 3. With two staff browser sessions, create, edit, cancel, arrive, seat, depart,
    and delete a reservation. Confirm the other session updates automatically;
    then test again with the browser offline or Realtime disabled to confirm the
-   polling fallback still refreshes within 10 seconds.
+   polling fallback still refreshes within its configured safety interval.
 4. Verify public booking rules separately: six guests per booking and the
    configured simultaneous capacity remain enforced, while authorized staff
    overrides continue to be audited.
