@@ -890,6 +890,13 @@ html, body { overflow-x: hidden; }
 .analytics-live-hour i, .analytics-live-source i { display: block; height: 100%; border-radius: inherit; background: var(--espresso); }
 .analytics-live-source i { background: var(--clay); }
 .analytics-live-hour b, .analytics-live-source b { color: var(--ink); font-size: 11px; text-align: right; }
+.analytics-live-days-panel { grid-column: 1 / -1; }
+.analytics-live-days { display: grid; gap: 12px; padding: 18px; }
+.analytics-live-day { display: grid; grid-template-columns: 92px minmax(0, 1fr) 24px auto; align-items: center; gap: 10px; color: var(--muted); font-size: 10px; }
+.analytics-live-day div { height: 7px; overflow: hidden; border-radius: 8px; background: var(--line-soft); }
+.analytics-live-day i { display: block; height: 100%; border-radius: inherit; background: var(--espresso); }
+.analytics-live-day b { color: var(--ink); font-size: 11px; text-align: right; }
+.analytics-live-day small { min-width: 52px; color: var(--muted); font-size: 10px; }
 .analytics-live-no-data { margin: 0; padding: 0 18px 18px; color: var(--muted); font-size: 11px; }
 .analytics-live-empty { display: grid; min-height: 260px; place-items: center; align-content: center; gap: 10px; color: var(--muted); }
 .analytics-live-empty p { margin: 0; font-size: 13px; }

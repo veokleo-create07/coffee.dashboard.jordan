@@ -43,6 +43,7 @@ export default function AnalyticsLive({ initial }: { initial: AnalyticsResult })
   const maxTrend = Math.max(1, ...(data?.trend.map((item) => item.reservations) ?? [0]));
   const maxHour = Math.max(1, ...(data?.hours.map((item) => item.reservations) ?? [0]));
   const peak = data?.hours.reduce((best, item) => item.reservations > (best?.reservations ?? 0) ? item : best, data.hours[0]);
+  const busiestDays = useMemo(() => [...(data?.trend ?? [])].filter((item) => item.reservations > 0).sort((a, b) => b.reservations - a.reservations || b.guests - a.guests || a.date.localeCompare(b.date)).slice(0, 5), [data]);
   const rangeLabel = useMemo(() => data ? `${data.startDate} – ${data.endDate}` : "", [data]);
   return <>
     <PageIntro eyebrow="" title={t("title")} description={t("description")} />
@@ -54,16 +55,17 @@ export default function AnalyticsLive({ initial }: { initial: AnalyticsResult })
     {pending ? <div className="analytics-live-status" aria-live="polite">{t("loading")}</div> : null}
     {!data ? <section className="panel analytics-live-empty" aria-live="polite"><BarChart3 size={20} /><p>{result.ok ? t("empty") : t("unavailable")}</p></section> : <>
       <section className="analytics-live-metrics" aria-label={t("metrics", { period: rangeLabel })}>
-        <MetricCard label={t("totalReservations")} value={data.totals.reservations} detail={t("liveData")} icon={<CalendarDays size={16} />} />
-        <MetricCard label={t("totalGuests")} value={data.totals.guests} detail={t("liveData")} icon={<UsersRound size={16} />} tone="sage" />
-        <MetricCard label={t("arrivals")} value={data.totals.arrivals} detail={t("liveData")} icon={<UserRoundCheck size={16} />} tone="gold" />
-        <MetricCard label={t("completed")} value={data.totals.completed} detail={t("liveData")} icon={<CheckCircle2 size={16} />} tone="stone" />
-        <MetricCard label={t("cancellations")} value={data.totals.cancellations} detail={t("liveData")} icon={<XCircle size={16} />} tone="clay" />
-        <MetricCard label={t("noShows")} value={data.totals.noShows} detail={t("liveData")} icon={<Clock3 size={16} />} tone="stone" />
+        <MetricCard label={t("totalReservations")} value={data.totals.reservations} detail={rangeLabel} icon={<CalendarDays size={16} />} />
+        <MetricCard label={t("totalGuests")} value={data.totals.guests} detail={rangeLabel} icon={<UsersRound size={16} />} tone="sage" />
+        <MetricCard label={t("arrivals")} value={data.totals.arrivals} detail={rangeLabel} icon={<UserRoundCheck size={16} />} tone="gold" />
+        <MetricCard label={t("completed")} value={data.totals.completed} detail={rangeLabel} icon={<CheckCircle2 size={16} />} tone="stone" />
+        <MetricCard label={t("cancellations")} value={data.totals.cancellations} detail={rangeLabel} icon={<XCircle size={16} />} tone="clay" />
+        <MetricCard label={t("noShows")} value={data.totals.noShows} detail={rangeLabel} icon={<Clock3 size={16} />} tone="stone" />
       </section>
       <div className="analytics-live-grid">
         <section className="panel chart-panel analytics-live-panel"><PanelHeading title={t("bookingTrend")} detail={rangeLabel} /><div className="analytics-live-bars" role="img" aria-label={t("bookingTrend")}>{data.trend.map((item) => <div className="analytics-live-bar-group" key={item.date}><span>{item.reservations}</span><i style={{ height: `${(item.reservations / maxTrend) * 100}%` }} /><small>{item.date.slice(5)}</small></div>)}</div>{data.trend.every((item) => item.reservations === 0) ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
         <section className="panel chart-panel analytics-live-panel"><PanelHeading title={t("busiestHours")} detail={peak ? `${String(peak.hour).padStart(2, "0")}:00` : t("noData")} /><div className="analytics-live-hours">{data.hours.map((item) => <div className="analytics-live-hour" key={item.hour}><span>{String(item.hour).padStart(2, "0")}:00</span><div><i style={{ width: `${(item.reservations / maxHour) * 100}%` }} /></div><b>{item.reservations}</b></div>)}</div>{data.hours.length === 0 ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
+        <section className="panel chart-panel analytics-live-panel analytics-live-days-panel"><PanelHeading title={t("busiestDays")} detail={busiestDays.length ? t("topDays", { count: busiestDays.length }) : t("noData")} /><div className="analytics-live-days">{busiestDays.map((item) => <div className="analytics-live-day" key={item.date}><span>{item.date}</span><div><i style={{ width: `${(item.reservations / Math.max(1, busiestDays[0]?.reservations ?? 0)) * 100}%` }} /></div><b>{item.reservations}</b><small>{item.guests} {t("guestsLabel")}</small></div>)}</div>{busiestDays.length === 0 ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
       </div>
       <section className="panel analytics-live-panel"><PanelHeading title={t("bookingSources")} detail={t("sourceShare")} /><div className="analytics-live-sources">{data.sources.map((item) => <div className="analytics-live-source" key={item.source}><span>{labelSource(item.source, t)}</span><div><i style={{ width: `${data.totals.reservations ? (item.reservations / data.totals.reservations) * 100 : 0}%` }} /></div><b>{item.reservations}</b></div>)}</div></section>
       <p className="analytics-live-note">{t("historicalNote")}</p>

@@ -223,7 +223,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["confirmed", "arrived", "completed", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
-    <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span><span className="result-count">{t("liveDataLabel")}</span></div>
+    <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span></div>
     {shown.length ? <div className="bulk-selection-bar"><label><input type="checkbox" checked={shown.every((item) => selectedIds.has(item.id))} onChange={toggleAllShown} aria-label={t("selectAll")} />{t("selectAll")}</label>{selectedIds.size ? <><span>{t("selectedCount", { count: selectedIds.size })}</span><button type="button" className="button-danger button-compact" onClick={() => setConfirmBulkDelete(true)}><Trash2 size={14} />{t("deleteSelected")}</button></> : null}</div> : null}
     {!result.ok ? <div className="live-data-alert" role="alert">{errorText}</div> : null}
     {loading ? <div className="live-empty-state" role="status">{t("loading")}</div> : null}
