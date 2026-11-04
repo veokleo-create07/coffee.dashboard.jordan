@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { BarChart3, CalendarDays, CheckCircle2, Clock3, UserRoundCheck, UsersRound, XCircle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { loadAnalytics, type AnalyticsPeriod, type AnalyticsResult } from "@/app/dashboard/actions";
 import { MetricCard, PageIntro, PanelHeading } from "@/components/dashboard/primitives";
 import { useReservationRealtime } from "@/lib/dashboard/use-reservation-realtime";
@@ -12,6 +12,7 @@ function labelSource(source: string, t: (key: string) => string) { return source
 
 export default function AnalyticsLive({ initial }: { initial: AnalyticsResult }) {
   const t = useTranslations("Analytics");
+  const locale = useLocale();
   const [period, setPeriod] = useState<AnalyticsPeriod>(initial.ok ? initial.period : "month");
   const [anchor, setAnchor] = useState(initial.ok ? initial.startDate : today());
   const [result, setResult] = useState<AnalyticsResult>(initial);
@@ -43,7 +44,24 @@ export default function AnalyticsLive({ initial }: { initial: AnalyticsResult })
   const maxTrend = Math.max(1, ...(data?.trend.map((item) => item.reservations) ?? [0]));
   const maxHour = Math.max(1, ...(data?.hours.map((item) => item.reservations) ?? [0]));
   const peak = data?.hours.reduce((best, item) => item.reservations > (best?.reservations ?? 0) ? item : best, data.hours[0]);
-  const busiestDays = useMemo(() => [...(data?.trend ?? [])].filter((item) => item.reservations > 0).sort((a, b) => b.reservations - a.reservations || b.guests - a.guests || a.date.localeCompare(b.date)).slice(0, 5), [data]);
+  const busiestDays = useMemo(() => {
+    const byWeekday = new Map<number, { reservations: number; guests: number }>();
+    for (const item of data?.trend ?? []) {
+      if (item.reservations === 0) continue;
+      const weekday = new Date(`${item.date}T12:00:00Z`).getUTCDay();
+      const current = byWeekday.get(weekday) ?? { reservations: 0, guests: 0 };
+      current.reservations += item.reservations;
+      current.guests += item.guests;
+      byWeekday.set(weekday, current);
+    }
+    return [...byWeekday.entries()]
+      .sort(([, a], [, b]) => b.reservations - a.reservations || b.guests - a.guests)
+      .slice(0, 5)
+      .map(([weekday, values]) => ({
+        ...values,
+        label: new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "Europe/Berlin" }).format(new Date(Date.UTC(2024, 0, 7 + weekday, 12))),
+      }));
+  }, [data, locale]);
   const rangeLabel = useMemo(() => data ? `${data.startDate} – ${data.endDate}` : "", [data]);
   return <>
     <PageIntro eyebrow="" title={t("title")} description={t("description")} />
@@ -65,7 +83,7 @@ export default function AnalyticsLive({ initial }: { initial: AnalyticsResult })
       <div className="analytics-live-grid">
         <section className="panel chart-panel analytics-live-panel"><PanelHeading title={t("bookingTrend")} detail={rangeLabel} /><div className="analytics-live-bars" role="img" aria-label={t("bookingTrend")}>{data.trend.map((item) => <div className="analytics-live-bar-group" key={item.date}><span>{item.reservations}</span><i style={{ height: `${(item.reservations / maxTrend) * 100}%` }} /><small>{item.date.slice(5)}</small></div>)}</div>{data.trend.every((item) => item.reservations === 0) ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
         <section className="panel chart-panel analytics-live-panel"><PanelHeading title={t("busiestHours")} detail={peak ? `${String(peak.hour).padStart(2, "0")}:00` : t("noData")} /><div className="analytics-live-hours">{data.hours.map((item) => <div className="analytics-live-hour" key={item.hour}><span>{String(item.hour).padStart(2, "0")}:00</span><div><i style={{ width: `${(item.reservations / maxHour) * 100}%` }} /></div><b>{item.reservations}</b></div>)}</div>{data.hours.length === 0 ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
-        <section className="panel chart-panel analytics-live-panel analytics-live-days-panel"><PanelHeading title={t("busiestDays")} detail={busiestDays.length ? t("topDays", { count: busiestDays.length }) : t("noData")} /><div className="analytics-live-days">{busiestDays.map((item) => <div className="analytics-live-day" key={item.date}><span>{item.date}</span><div><i style={{ width: `${(item.reservations / Math.max(1, busiestDays[0]?.reservations ?? 0)) * 100}%` }} /></div><b>{item.reservations}</b><small>{item.guests} {t("guestsLabel")}</small></div>)}</div>{busiestDays.length === 0 ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
+        <section className="panel chart-panel analytics-live-panel analytics-live-days-panel"><PanelHeading title={t("busiestDays")} detail={busiestDays.length ? t("topDays", { count: busiestDays.length }) : t("noData")} /><div className="analytics-live-days">{busiestDays.map((item) => <div className="analytics-live-day" key={item.label}><span>{item.label}</span><div><i style={{ width: `${(item.reservations / Math.max(1, busiestDays[0]?.reservations ?? 0)) * 100}%` }} /></div><b>{item.reservations}</b><small>{item.guests} {t("guestsLabel")}</small></div>)}</div>{busiestDays.length === 0 ? <p className="analytics-live-no-data">{t("noData")}</p> : null}</section>
       </div>
       <section className="panel analytics-live-panel"><PanelHeading title={t("bookingSources")} detail={t("sourceShare")} /><div className="analytics-live-sources">{data.sources.map((item) => <div className="analytics-live-source" key={item.source}><span>{labelSource(item.source, t)}</span><div><i style={{ width: `${data.totals.reservations ? (item.reservations / data.totals.reservations) * 100 : 0}%` }} /></div><b>{item.reservations}</b></div>)}</div></section>
       <p className="analytics-live-note">{t("historicalNote")}</p>
