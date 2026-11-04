@@ -125,7 +125,6 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const statusName = (value: ReservationStatus) => c(value === "no_show" ? "noShow" : value);
   const errorText = !result.ok ? result.reason === "unauthorized" ? c("reservationUnauthorized") : result.reason === "permission" ? c("reservationPermission") : c("reservationLoadError") : "";
   const translatedError = (code: string) => t(`errors.${errorKeys[code] ?? "unavailable"}`);
-  const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
   function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0], options?: { removeFromView?: boolean }) {
     if (submitLockRef.current) return;
@@ -254,7 +253,6 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
           </div>
           <section className="detail-request"><h4><Pencil size={14} />{t("tableRequests")}</h4><p>{details.note || c("noSpecialRequests")}</p></section>
-          <section className="detail-section"><h4><Clock3 size={14} />{t("timeline")}</h4><div className="detail-timeline">{details.arrivedAt ? <div><i /><span>{timestampLabel(details.arrivedAt)}</span><strong>{t("actualArrival")}</strong></div> : details.status === "arrived" ? <div><i /><span>—</span><strong>{t("arrivalTimeUnavailable")}</strong></div> : <p className="detail-muted">{t("noTimeline")}</p>}{details.departedAt ? <div><i /><span>{timestampLabel(details.departedAt)}</span><strong>{t("actualDeparture")}</strong></div> : null}{details.status === "arrived" ? <VisitTimer reservation={details} now={now} /> : null}</div></section>
           {error ? <p className="form-error" role="alert">{error}</p> : null}
         </div>
       </div>
