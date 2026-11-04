@@ -45,7 +45,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM unnest(p_tables) t(table_number) WHERE table_number NOT IN (1,2,3,4,5,6,7,11,22,33,44,55,109,110,111,112,113)) THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='INVALID_TABLES'; END IF;
   SELECT * INTO v_row FROM public.reservations WHERE id=p_reservation_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='NOT_FOUND'; END IF;
-  IF v_row.status <> 'confirmed' THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='INVALID_TRANSITION'; END IF;
+  IF v_row.status NOT IN ('pending', 'confirmed') THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='INVALID_TRANSITION'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('altstadtliebe-table-assignments-v1',0));
   IF EXISTS (SELECT 1 FROM public.reservation_table_assignments a WHERE a.table_number = ANY(p_tables)) THEN RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='TABLE_OCCUPIED'; END IF;
   UPDATE public.reservations SET status='arrived', updated_at=now() WHERE id=p_reservation_id RETURNING * INTO v_row;
