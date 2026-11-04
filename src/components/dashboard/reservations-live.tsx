@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Ban, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
 import { useReservationRealtime } from "@/lib/dashboard/use-reservation-realtime";
-import { arriveWithTables, assignReservationTables, loadReservations, loadTableAssignments, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus, type TableNumber } from "@/app/dashboard/actions";
+import { arriveWithTables, assignReservationTables, cancelReservations, loadReservations, loadTableAssignments, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus, type TableNumber } from "@/app/dashboard/actions";
 
 type StatusFilter = "all" | LiveReservation["status"];
 const statusClass: Record<ReservationStatus, string> = { pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", completed: "status-completed", cancelled: "status-cancelled", no_show: "status-no-show" };
@@ -26,8 +26,14 @@ function timerValue(milliseconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function VisitTimer({ reservation, now }: { reservation: LiveReservation; now: number }) {
+function VisitTimer({ reservation }: { reservation: LiveReservation; now?: number }) {
   const t = useTranslations("Reservations");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (reservation.status !== "arrived" || !reservation.arrivedAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [reservation.arrivedAt, reservation.status]);
   if (reservation.status !== "arrived") return null;
   if (!reservation.arrivedAt) return <span className="visit-timer timer-unavailable">{t("arrivalTimeUnavailable")}</span>;
   const remaining = Date.parse(reservation.arrivedAt) + visitDurationMs - now;
@@ -42,8 +48,9 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
   const [reservations, setReservations] = useState(initial.ok ? initial.reservations.filter((item) => item.status !== "cancelled") : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
   const [details, setDetails] = useState<LiveReservation | null>(() => initial.ok && initialReservationId ? initial.reservations.find((item) => item.id === initialReservationId && item.status !== "cancelled") ?? null : null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [arriveTarget, setArriveTarget] = useState<LiveReservation | null>(null); const [tableMode, setTableMode] = useState<"arrive" | "edit">("arrive"); const [arrivalTables, setArrivalTables] = useState<TableNumber[]>([]); const [tableAssignments, setTableAssignments] = useState<Record<number, string>>({}); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [pending, startTransition] = useTransition(); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
+  const [transitionPending, startTransition] = useTransition(); const [saving, setSaving] = useState(false); const pending = saving || transitionPending; const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const pendingCreatesRef = useRef(new Map<string, { reservation: LiveReservation; expiresAt: number }>());
+  const submitLockRef = useRef(false);
   useEffect(() => { void loadTableAssignments().then((next) => { if (next.ok) setTableAssignments(Object.fromEntries(next.assignments.map((item) => [item.tableNumber, item.reservationId]))); }); }, []);
   const start = key(date); const end = start;
 
@@ -62,19 +69,19 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
   const refreshRef = useRef<() => void>(() => undefined);
   const refreshLive = () => { refreshRef.current(); };
-  useReservationRealtime(refreshLive);
+  const realtimeAvailable = useReservationRealtime(refreshLive);
 
   async function refresh() {
-    const next = await loadReservations(start, end); const visible = visibleReservations(next);
+    const next = await loadReservations(loadedRange.start, loadedRange.end); const visible = visibleReservations(next);
     setResult(next.ok ? { ...next, reservations: visible } : next);
-    if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
+    if (next.ok) setReservations(visible);
     if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
   }
   useEffect(() => {
     refreshRef.current = () => { void refresh(); };
     // The callback intentionally tracks the latest range and selected detail.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [details, end, hiddenReservationIds, start]);
+  }, [details, end, hiddenReservationIds, loadedRange.end, loadedRange.start, start]);
   useEffect(() => {
     if (start >= loadedRange.start && end <= loadedRange.end) return;
     let active = true;
@@ -87,31 +94,31 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     const poll = async () => {
       if (inFlight) return;
       inFlight = true;
-      const next = await loadReservations(start, end);
+      const next = await loadReservations(loadedRange.start, loadedRange.end);
       inFlight = false;
       if (!active) return;
       const visible = visibleReservations(next);
       setResult(next.ok ? { ...next, reservations: visible } : next);
       if (next.ok) {
         setReservations(visible);
-        setLoadedRange({ start, end });
         setDetails((current) => current ? visible.find((item) => item.id === current.id) ?? null : null);
       }
     };
-    const interval = window.setInterval(() => { void poll(); }, 10_000);
+    const interval = window.setInterval(() => { void poll(); }, realtimeAvailable ? 60_000 : 30_000);
     const onFocus = () => { if (document.visibilityState === "visible") void poll(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
-    const clock = window.setInterval(() => setNow(Date.now()), 1_000);
+    const clock = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => { active = false; window.clearInterval(interval); window.clearInterval(clock); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
-  }, [end, hiddenReservationIds, start, visibleReservations]);
+  }, [end, hiddenReservationIds, loadedRange.end, loadedRange.start, realtimeAvailable, start, visibleReservations]);
 
-  const periodReservations = reservations.filter((item) => item.date === start);
-  const shown = periodReservations.filter((item) => {
+  const deferredQuery = useDeferredValue(query);
+  const periodReservations = useMemo(() => reservations.filter((item) => item.date === start), [reservations, start]);
+  const shown = useMemo(() => periodReservations.filter((item) => {
     if (status !== "all" && item.status !== status) return false;
-    const term = query.trim().toLocaleLowerCase(locale);
+    const term = deferredQuery.trim().toLocaleLowerCase(locale);
     return !term || `${item.guest} ${item.email ?? ""} ${item.phone ?? ""} ${item.reference}`.toLocaleLowerCase(locale).includes(term);
-  });
+  }), [deferredQuery, locale, periodReservations, status]);
   const loading = (start < loadedRange.start || end > loadedRange.end) && result.ok;
   const format = (value: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, { ...options, timeZone: "Europe/Berlin" }).format(value);
   const title = format(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -121,33 +128,15 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const timestampLabel = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
   function step(direction: -1 | 1) { setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + direction); return next; }); }
   function submit(values: Parameters<typeof manageReservation>[0], options?: { removeFromView?: boolean }) {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setSaving(true);
     setError("");
-    const optimisticId = values.action === "create" ? `optimistic-${Date.now()}` : null;
-    if (optimisticId && values.date && values.time && values.guest) {
-      const optimistic: LiveReservation = {
-        id: optimisticId,
-        reference: "",
-        guest: values.guest.trim(),
-        email: values.email?.trim() || null,
-        phone: values.phone?.trim() || null,
-        date: values.date,
-        time: values.time,
-        startsAt: `${values.date}T${values.time}:00+01:00`,
-        arrivedAt: null,
-        departedAt: null,
-        guests: values.guests ?? 1,
-        status: "confirmed",
-        source: values.source ?? "phone",
-        note: values.note?.trim() || null,
-      };
-      pendingCreatesRef.current.set(optimisticId, { reservation: optimistic, expiresAt: Date.now() + 60_000 });
-      setReservations((current) => [...current, optimistic].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
-    }
     startTransition(async () => {
       const response: ReservationActionResult = await manageReservation(values);
       if (!response.ok) {
-        if (optimisticId) pendingCreatesRef.current.delete(optimisticId);
-        if (optimisticId) setReservations((current) => current.filter((item) => item.id !== optimisticId));
+        submitLockRef.current = false;
+        setSaving(false);
         setError(translatedError(response.code));
         return;
       }
@@ -158,7 +147,6 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setReservations((current) => current.filter((item) => item.id !== response.reservation!.id));
         setDetails((current) => current?.id === response.reservation!.id ? null : current);
       } else if (response.reservation) {
-        if (optimisticId) pendingCreatesRef.current.delete(optimisticId);
         if (values.action === "create") pendingCreatesRef.current.set(response.reservation.id, { reservation: response.reservation as LiveReservation, expiresAt: Date.now() + 60_000 });
         if (response.reservation.status === "cancelled") {
           setReservations((current) => current.filter((item) => item.id !== response.reservation?.id));
@@ -166,17 +154,12 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         } else {
           setReservations((current) => current.some((item) => item.id === response.reservation?.id)
             ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
-            : optimisticId && current.some((item) => item.id === optimisticId)
-              ? current.map((item) => item.id === optimisticId ? response.reservation as LiveReservation : item)
             : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
           setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
         }
       }
-      // Keep the successful RPC result in place for creates. A just-committed
-      // insert can briefly be absent from a follow-up read, and replacing the
-      // confirmed row with that stale snapshot makes it flash and disappear.
-      // Realtime/focus polling will reconcile it once the read is current.
-      if (values.action !== "create") void refresh();
+      submitLockRef.current = false;
+      setSaving(false);
     });
   }
   function performStatus(next: NonNullable<Parameters<typeof manageReservation>[0]["status"]>) {
@@ -198,11 +181,9 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     const ids = [...selectedIds].filter((id) => shown.some((item) => item.id === id));
     if (!ids.length) return;
     setBulkDeleting(true); setError("");
-    const succeeded: string[] = []; let firstError = "";
-    for (const id of ids) {
-      const response = await manageReservation({ action: "status", id, status: "cancelled" });
-      if (response.ok) succeeded.push(id); else if (!firstError) firstError = translatedError(response.code);
-    }
+    const response = await cancelReservations(ids);
+    const succeeded = response.succeeded;
+    const firstError = response.failed[0] ? translatedError(response.failed[0].code) : "";
     if (succeeded.length) {
       setHiddenReservationIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.add(id)); window.localStorage.setItem(hiddenReservationStorageKey, JSON.stringify([...next])); return next; });
       setReservations((current) => current.filter((item) => !succeeded.includes(item.id)));
@@ -210,7 +191,30 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       setSelectedIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.delete(id)); return next; });
       setMessage(t("success.bulkDeleted", { count: succeeded.length }));
     }
-    setBulkDeleting(false); setConfirmBulkDelete(false); if (firstError) setError(firstError); void refresh();
+    setBulkDeleting(false); setConfirmBulkDelete(false); if (firstError) setError(firstError);
+  }
+  function saveTableAssignment() {
+    if (!arriveTarget || pending || !arrivalTables.length) return;
+    const target = arriveTarget;
+    const selectedTables = [...arrivalTables];
+    setSaving(true);
+    startTransition(async () => {
+      const response = tableMode === "arrive" ? await arriveWithTables(target.id, selectedTables) : await assignReservationTables(target.id, selectedTables);
+      if (!response.ok) { setSaving(false); setError(translatedError(response.code)); return; }
+      setTableAssignments((current) => {
+        const next = Object.fromEntries(Object.entries(current).filter(([, reservationId]) => reservationId !== target.id)) as Record<number, string>;
+        selectedTables.forEach((table) => { next[table] = target.id; });
+        return next;
+      });
+      if (tableMode === "arrive" && "reservation" in response && response.reservation) {
+        const reservation = response.reservation as LiveReservation;
+        setDetails(reservation);
+        setReservations((current) => current.map((item) => item.id === reservation.id ? reservation : item));
+      }
+      setArriveTarget(null); setArrivalTables([]);
+      setSaving(false);
+      void loadTableAssignments().then((next) => { if (next.ok) setTableAssignments(Object.fromEntries(next.assignments.map((item) => [item.tableNumber, item.reservationId]))); });
+    });
   }
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
@@ -261,7 +265,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         <div className="detail-secondary-actions">{(details.status === "confirmed" || details.status === "arrived") ? <button className="button-secondary action-edit" disabled={pending} onClick={() => { setEditing(true); setError(""); }}><Pencil size={14} />{t("actions.edit")}</button> : null}{details.status === "confirmed" || details.status === "arrived" ? <button className="button-secondary danger-action action-cancel" disabled={pending} onClick={() => performStatus("cancelled")}><Ban size={14} />{t("actions.cancel")}</button> : null}{details.status !== "cancelled" ? <button className="button-secondary danger-action action-delete" disabled={pending} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />{t("actions.delete")}</button> : null}</div>
       </div>{pending ? <span className="detail-muted detail-saving"><LoaderCircle className="spin" size={14} /> {t("saving")}</span> : null}</section></footer>
     </aside> : null}</div>
-    <Modal open={Boolean(arriveTarget)} variant="confirm" title={t(tableMode === "arrive" ? "tableSelectTitle" : "changeTables")} subtitle={arriveTarget?.guest} onClose={() => { if (!pending) { setArriveTarget(null); setArrivalTables([]); } }} footer={<button type="button" className="button-primary" disabled={pending || !arrivalTables.length} onClick={() => { if (!arriveTarget) return; startTransition(async () => { const response = tableMode === "arrive" ? await arriveWithTables(arriveTarget.id, arrivalTables) : await assignReservationTables(arriveTarget.id, arrivalTables); if (!response.ok) { setError(translatedError(response.code)); return; } setArriveTarget(null); setArrivalTables([]); const next = await loadTableAssignments(); if (next.ok) setTableAssignments(Object.fromEntries(next.assignments.map((item) => [item.tableNumber, item.reservationId]))); if (tableMode === "arrive" && response.ok && "reservation" in response && response.reservation) setDetails(response.reservation as LiveReservation); void refresh(); }); }}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : t("save")}</button>}> <p className="visit-tag-prompt">{t("tableSelectDescription")}</p><div className="table-selector-grid">{tableNumbers.map((table) => { const occupiedBy = tableAssignments[table]; const selected = arrivalTables.includes(table); return <button type="button" key={table} disabled={Boolean(occupiedBy && occupiedBy !== arriveTarget?.id)} className={`table-selector-option${selected ? " is-selected" : ""}${occupiedBy ? " is-occupied" : ""}`} onClick={() => setArrivalTables((current) => selected ? current.filter((value) => value !== table) : [...current, table])}>{table}</button>; })}</div></Modal>
+    <Modal open={Boolean(arriveTarget)} variant="confirm" title={t(tableMode === "arrive" ? "tableSelectTitle" : "changeTables")} subtitle={arriveTarget?.guest} onClose={() => { if (!pending) { setArriveTarget(null); setArrivalTables([]); } }} footer={<button type="button" className="button-primary" disabled={pending || !arrivalTables.length} onClick={saveTableAssignment}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : t("save")}</button>}> <p className="visit-tag-prompt">{t("tableSelectDescription")}</p><div className="table-selector-grid">{tableNumbers.map((table) => { const occupiedBy = tableAssignments[table]; const selected = arrivalTables.includes(table); return <button type="button" key={table} disabled={Boolean(occupiedBy && occupiedBy !== arriveTarget?.id)} className={`table-selector-option${selected ? " is-selected" : ""}${occupiedBy ? " is-occupied" : ""}`} onClick={() => setArrivalTables((current) => selected ? current.filter((value) => value !== table) : [...current, table])}>{table}</button>; })}</div></Modal>
     {creating || editing ? <ReservationEditor key={creating ? "create" : `edit-${details?.id ?? "none"}`} mode={creating ? "create" : "edit"} initial={details} today={key(date)} error={error} busy={pending} onClose={() => { setCreating(false); setEditing(false); setError(""); }} onSubmit={submit} /> : null}
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>

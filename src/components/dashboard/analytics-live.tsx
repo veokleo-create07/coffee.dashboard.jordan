@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { BarChart3, CalendarDays, CheckCircle2, Clock3, UserRoundCheck, UsersRound, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { loadAnalytics, type AnalyticsPeriod, type AnalyticsResult } from "@/app/dashboard/actions";
 import { MetricCard, PageIntro, PanelHeading } from "@/components/dashboard/primitives";
+import { useReservationRealtime } from "@/lib/dashboard/use-reservation-realtime";
 
 function today() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date()); }
 function labelSource(source: string, t: (key: string) => string) { return source === "website" ? t("website") : source === "phone" ? t("telephone") : t("walkIn"); }
@@ -15,8 +16,27 @@ export default function AnalyticsLive({ initial }: { initial: AnalyticsResult })
   const [anchor, setAnchor] = useState(initial.ok ? initial.startDate : today());
   const [result, setResult] = useState<AnalyticsResult>(initial);
   const [pending, startTransition] = useTransition();
-  useEffect(() => { if (!initial.ok) return; }, [initial]);
-  const refresh = (nextPeriod: AnalyticsPeriod, nextDate: string) => startTransition(async () => setResult(await loadAnalytics(nextPeriod, nextDate)));
+  const cache = useRef(new Map<string, AnalyticsResult>([[`${period}:${anchor}`, initial]]));
+  const requestId = useRef(0);
+  const refresh = useCallback((nextPeriod: AnalyticsPeriod, nextDate: string, force = false) => {
+    const key = `${nextPeriod}:${nextDate}`;
+    const cached = force ? undefined : cache.current.get(key);
+    if (cached) {
+      setResult(cached);
+      return;
+    }
+    const currentRequest = ++requestId.current;
+    startTransition(async () => {
+      const next = await loadAnalytics(nextPeriod, nextDate);
+      if (currentRequest !== requestId.current) return;
+      cache.current.set(key, next);
+      setResult(next);
+    });
+  }, []);
+  useReservationRealtime(() => {
+    cache.current.clear();
+    refresh(period, anchor, true);
+  });
   const setPeriodAndRefresh = (value: AnalyticsPeriod) => { setPeriod(value); refresh(value, anchor); };
   const setDateAndRefresh = (value: string) => { setAnchor(value); refresh(period, value); };
   const data = result.ok ? result : null;

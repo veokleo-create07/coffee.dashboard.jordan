@@ -15,16 +15,29 @@ export async function checkStaffMembership(
   return { isStaff: Boolean(data) && !error, error };
 }
 
-export const getStaffContext = cache(async () => {
+export const getAuthenticatedContext = cache(async () => {
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
 
-  if (error || !user) return null;
+  if (error || !data?.claims?.sub) return null;
 
-  const { isStaff } = await checkStaffMembership(supabase, user.id);
+  return {
+    supabase,
+    user: {
+      id: data.claims.sub,
+      email: typeof data.claims.email === "string" ? data.claims.email : null,
+    },
+  };
+});
+
+export const getStaffContext = cache(async () => {
+  const authenticated = await getAuthenticatedContext();
+  if (!authenticated) return null;
+
+  const { isStaff } = await checkStaffMembership(authenticated.supabase, authenticated.user.id);
   if (!isStaff) return null;
 
-  return { supabase, user };
+  return authenticated;
 });
 
 export async function getStaffUser() {

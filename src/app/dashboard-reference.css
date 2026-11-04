@@ -771,6 +771,8 @@ html, body { overflow-x: hidden; }
   html { -webkit-text-size-adjust: 100%; }
   body { overscroll-behavior-x: none; }
   button, a, select, input[type="checkbox"] { touch-action: manipulation; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  .modal-backdrop { background: rgba(30, 25, 22, .68); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .dashboard-frame { width: calc(100% - 24px); min-height: calc(100vh - 24px); margin: 12px; }
   .dashboard-sidebar { top: 12px; height: calc(100vh - 24px); }
   .dashboard-content { padding: 26px 24px max(34px, env(safe-area-inset-bottom)); }

@@ -1,10 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getStaffContext } from "@/lib/auth/staff";
+import { getAuthenticatedContext } from "@/lib/auth/staff";
 
 export type ReservationStatus = "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show";
 export type BookingSource = "website" | "phone" | "walk_in";
@@ -17,6 +16,7 @@ export type ReservationLoadResult =
   | { ok: true; reservations: LiveReservation[] }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type ReservationActionResult = { ok: true; reservation?: LiveReservation } | { ok: false; code: string };
+export type BulkReservationActionResult = { succeeded: string[]; failed: Array<{ id: string; code: string }> };
 export type TableNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 11 | 22 | 33 | 44 | 55 | 109 | 110 | 111 | 112 | 113;
 export type TableAssignment = { reservationId: string; tableNumber: TableNumber; assignedAt: string };
 export type TableAssignmentResult = { ok: true; assignments: TableAssignment[]; setupRequired?: boolean } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
@@ -73,8 +73,8 @@ function berlinParts(iso: string) {
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T12:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10);
 }
-async function verifiedStaff() {
-  return (await getStaffContext())?.supabase ?? null;
+async function authenticatedClient() {
+  return (await getAuthenticatedContext())?.supabase ?? null;
 }
 function mapRow(row: ReservationRow): LiveReservation {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(row.starts_at));
@@ -91,7 +91,7 @@ export async function loadReservations(startDate: string, endDate: string): Prom
   // authenticated client from accidentally requesting an expensive scan.
   if (!isIsoDate(startDate) || !isIsoDate(endDate) || startDate > endDate || dateRangeDays(startDate, endDate) > 366) return { ok: false, reason: "unavailable" };
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const exclusive = new Date(`${endDate}T12:00:00Z`); exclusive.setUTCDate(exclusive.getUTCDate() + 1);
     const rows: ReservationRow[] = [];
     for (let offset = 0; ; offset += 1000) {
@@ -109,7 +109,7 @@ export async function loadAnalytics(period: AnalyticsPeriod, anchorDate: string)
   const endDate = period === "month" ? addDays(startDate, new Date(Date.UTC(Number(startDate.slice(0, 4)), Number(startDate.slice(5, 7)), 0)).getUTCDate() - 1) : addDays(startDate, period === "week" ? 6 : 0);
   if (dateRangeDays(startDate, endDate) > 366) return { ok: false, reason: "unavailable" };
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const exclusive = addDays(endDate, 1);
     const rows: Array<{ booking_source: BookingSource; guest_count: number; starts_at: string; arrived_at: string | null; status: ReservationStatus }> = [];
     for (let offset = 0; ; offset += 1000) {
@@ -133,16 +133,22 @@ export async function loadAnalytics(period: AnalyticsPeriod, anchorDate: string)
 }
 export async function getOverviewReservations() {
   const today = berlinDateToday(); const end = new Date(`${today}T12:00:00Z`); end.setUTCDate(end.getUTCDate() + 6);
+  const initialEnd = end.toISOString().slice(0, 10);
+  const snapshot = await loadOverviewSnapshot(today, initialEnd);
+  return { today, initialEnd, ...snapshot };
+}
+
+export async function loadOverviewSnapshot(startDate: string, endDate: string) {
   const [result, occupancy] = await Promise.all([
-    loadReservations(today, end.toISOString().slice(0, 10)),
+    loadReservations(startDate, endDate),
     loadCurrentOccupancy(),
   ]);
-  return { today, result, occupancy };
+  return { result, occupancy };
 }
 
 export async function loadCurrentOccupancy(): Promise<OccupancyResult> {
   try {
-    const supabase = await verifiedStaff();
+    const supabase = await authenticatedClient();
     if (!supabase) return { ok: false, reason: "unauthorized" };
     const { data, error } = await supabase.from("reservations")
       .select("id,guest_count,arrived_at")
@@ -165,7 +171,7 @@ function getErrorCode(error: { message?: string; code?: string }) {
 const tableNumbers: TableNumber[] = [1, 2, 3, 4, 5, 6, 7, 11, 22, 33, 44, 55, 109, 110, 111, 112, 113];
 export async function loadTableAssignments(): Promise<TableAssignmentResult> {
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
     const { data, error } = await supabase.rpc("staff_load_table_assignments");
     if (error) {
       return { ok: true, assignments: [], setupRequired: true };
@@ -175,37 +181,39 @@ export async function loadTableAssignments(): Promise<TableAssignmentResult> {
 }
 export async function arriveWithTables(id: string, tables: TableNumber[]): Promise<ReservationActionResult> {
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
     const { data, error } = await supabase.rpc("staff_arrive_with_tables", { p_reservation_id: id, p_tables: tables });
     if (error) return { ok: false, code: getErrorCode(error) };
-    revalidatePath("/dashboard"); revalidatePath("/dashboard/reservations"); revalidatePath("/dashboard/tables");
     const row = data && typeof data === "object" ? data as ReservationRow : null;
     return { ok: true, reservation: row ? mapRow(row) : undefined };
   } catch { return { ok: false, code: "UNAVAILABLE" }; }
 }
 export async function assignReservationTables(id: string, tables: TableNumber[]): Promise<{ ok: true } | { ok: false; code: string }> {
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
     const { error } = await supabase.rpc("staff_assign_reservation_tables", { p_reservation_id: id, p_tables: tables });
     return error ? { ok: false, code: getErrorCode(error) } : { ok: true };
   } catch { return { ok: false, code: "UNAVAILABLE" }; }
 }
 export type TableBoardItem = { tableNumber: TableNumber; reservation: LiveReservation | null };
 export async function loadTableBoard(): Promise<{ ok: true; tables: TableBoardItem[]; setupRequired?: boolean } | { ok: false; reason: "unauthorized" | "permission" | "unavailable" }> {
-  const assignments = await loadTableAssignments(); if (!assignments.ok) return assignments;
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, reason: "unauthorized" };
-    const ids = [...new Set(assignments.assignments.map((item) => item.reservationId))];
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, reason: "unauthorized" };
+    const assignmentRows = await supabase.rpc("staff_load_table_assignments");
+    if (assignmentRows.error) return { ok: true, setupRequired: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: null })) };
+    const assignments = (assignmentRows.data as Array<{ reservation_id: string; table_number: number; assigned_at: string }> ?? []).map((row) => ({ reservationId: row.reservation_id, tableNumber: row.table_number as TableNumber, assignedAt: row.assigned_at }));
+    const ids = [...new Set(assignments.map((item) => item.reservationId))];
     const rows = ids.length ? await supabase.from("reservations").select("id,reservation_reference,customer_name,customer_email,customer_phone,booking_source,guest_count,starts_at,arrived_at,departed_at,special_requests,status").in("id", ids) : { data: [], error: null };
     if (rows.error) return { ok: false, reason: rows.error.code === "42501" ? "permission" : "unavailable" };
     const reservations = new Map(((rows.data ?? []) as ReservationRow[]).map((row) => [row.id, mapRow(row)]));
-    return { ok: true, setupRequired: assignments.setupRequired, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: reservations.get(assignments.assignments.find((item) => item.tableNumber === tableNumber)?.reservationId ?? "") ?? null })) };
+    const assignmentMap = new Map(assignments.map((item) => [item.tableNumber, item.reservationId]));
+    return { ok: true, tables: tableNumbers.map((tableNumber) => ({ tableNumber, reservation: reservations.get(assignmentMap.get(tableNumber) ?? "") ?? null })) };
   } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function checkReservationAvailability(input: { date: string; time: string; guests: number; source: BookingSource; excludeId?: string }): Promise<AvailabilityResult> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}$/.test(input.time) || !Number.isInteger(input.guests) || input.guests < 1 || input.guests > 30) return { ok: false, code: "INVALID_INPUT" };
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
     const { data, error } = await supabase.rpc("staff_check_reservation_availability", { p_date: input.date, p_time: input.time, p_guest_count: input.guests, p_booking_source: input.source, p_exclude_reservation_id: input.excludeId ?? null });
     if (error) return { ok: false, code: getErrorCode(error) };
     const row = Array.isArray(data) ? data[0] : data;
@@ -216,7 +224,7 @@ export async function checkReservationAvailability(input: { date: string; time: 
 export async function manageReservation(input: ReservationMutation): Promise<ReservationActionResult> {
   if (!input || !["create", "edit", "status"].includes(input.action)) return { ok: false, code: "INVALID_INPUT" };
   try {
-    const supabase = await verifiedStaff(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const supabase = await authenticatedClient(); if (!supabase) return { ok: false, code: "NOT_STAFF" };
     const locale = (await cookies()).get("AL_LOCALE")?.value === "en" ? "en" : "de";
     const { data, error } = await supabase.rpc("staff_manage_reservation", {
       p_action: input.action, p_reservation_id: input.id ?? null,
@@ -226,9 +234,32 @@ export async function manageReservation(input: ReservationMutation): Promise<Res
       p_exception_reason: input.exceptionReason?.trim() || null, p_language: locale,
     });
     if (error) return { ok: false, code: getErrorCode(error) };
-    revalidatePath("/dashboard"); revalidatePath("/dashboard/reservations");
     const row = data && typeof data === "object" ? data as ReservationRow : null;
     return { ok: true, reservation: row ? mapRow(row) : undefined };
   } catch { return { ok: false, code: "UNAVAILABLE" }; }
+}
+export async function cancelReservations(ids: string[]): Promise<BulkReservationActionResult> {
+  const uniqueIds = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 100);
+  if (!uniqueIds.length) return { succeeded: [], failed: [] };
+  try {
+    const supabase = await authenticatedClient();
+    if (!supabase) return { succeeded: [], failed: uniqueIds.map((id) => ({ id, code: "NOT_STAFF" })) };
+    const results = await Promise.all(uniqueIds.map(async (id) => {
+      const { error } = await supabase.rpc("staff_manage_reservation", {
+        p_action: "status", p_reservation_id: id,
+        p_customer_name: null, p_customer_email: null, p_customer_phone: null,
+        p_guest_count: null, p_date: null, p_time: null, p_special_requests: "",
+        p_booking_source: null, p_target_status: "cancelled",
+        p_exception_reason: null, p_language: "de",
+      });
+      return error ? { id, code: getErrorCode(error) } : { id, code: null };
+    }));
+    return {
+      succeeded: results.filter((result) => result.code === null).map((result) => result.id),
+      failed: results.filter((result): result is { id: string; code: string } => result.code !== null),
+    };
+  } catch {
+    return { succeeded: [], failed: uniqueIds.map((id) => ({ id, code: "UNAVAILABLE" })) };
+  }
 }
 export async function signOut() { const supabase = await createClient(); await supabase.auth.signOut(); redirect("/login"); }
