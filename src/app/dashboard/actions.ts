@@ -120,15 +120,25 @@ export async function loadAnalytics(period: AnalyticsPeriod, anchorDate: string)
     const trend = new Map<string, { reservations: number; guests: number }>();
     const hours = new Map<number, number>();
     const sourceMap = new Map<BookingSource, { reservations: number; guests: number }>([["website", { reservations: 0, guests: 0 }], ["phone", { reservations: 0, guests: 0 }], ["walk_in", { reservations: 0, guests: 0 }]]);
-    let cancellations = 0, noShows = 0, arrivals = 0, completed = 0, guests = 0;
+    let reservations = 0, cancellations = 0, noShows = 0, arrivals = 0, completed = 0, guests = 0;
     for (const row of rows) {
+      if (row.status === "cancelled") cancellations += 1;
+      if (row.status === "no_show") noShows += 1;
+      if (row.arrived_at) arrivals += 1;
+      if (row.status === "completed") completed += 1;
+
+      // Cancelled and no-show bookings remain visible in their dedicated
+      // totals, but must not count as active demand or expected guests.
+      if (row.status === "cancelled" || row.status === "no_show") continue;
+
+      reservations += 1;
       const parts = berlinParts(row.starts_at); const day = trend.get(parts.date) ?? { reservations: 0, guests: 0 }; day.reservations += 1; day.guests += row.guest_count; trend.set(parts.date, day);
       hours.set(parts.hour, (hours.get(parts.hour) ?? 0) + 1);
       const source = sourceMap.get(row.booking_source) ?? { reservations: 0, guests: 0 }; source.reservations += 1; source.guests += row.guest_count; sourceMap.set(row.booking_source, source);
-      guests += row.guest_count; if (row.status === "cancelled") cancellations += 1; if (row.status === "no_show") noShows += 1; if (row.arrived_at) arrivals += 1; if (row.status === "completed") completed += 1;
+      guests += row.guest_count;
     }
     const trendRows = Array.from({ length: dateRangeDays(startDate, endDate) }, (_, index) => { const date = addDays(startDate, index); return { date, ...(trend.get(date) ?? { reservations: 0, guests: 0 }) }; });
-    return { ok: true, period, startDate, endDate, totals: { reservations: rows.length, guests, cancellations, noShows, arrivals, completed }, trend: trendRows, hours: Array.from(hours, ([hour, reservations]) => ({ hour, reservations })).sort((a, b) => a.hour - b.hour), sources: Array.from(sourceMap, ([source, values]) => ({ source, ...values })) };
+    return { ok: true, period, startDate, endDate, totals: { reservations, guests, cancellations, noShows, arrivals, completed }, trend: trendRows, hours: Array.from(hours, ([hour, reservations]) => ({ hour, reservations })).sort((a, b) => a.hour - b.hour), sources: Array.from(sourceMap, ([source, values]) => ({ source, ...values })) };
   } catch { return { ok: false, reason: "unavailable" }; }
 }
 export async function getOverviewReservations() {
