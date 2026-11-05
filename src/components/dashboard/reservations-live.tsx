@@ -46,8 +46,8 @@ function VisitTimer({ reservation }: { reservation: LiveReservation; now?: numbe
 export function ReservationsLive({ today, initialStart, initialEnd, initial, initialDate, initialReservationId }: { today: string; initialStart: string; initialEnd: string; initial: ReservationLoadResult; initialDate?: string; initialReservationId?: string }) {
   const t = useTranslations("Reservations"); const c = useTranslations("Common"); const locale = useLocale();
   const [date, setDate] = useState(new Date(`${initialDate ?? today}T12:00:00`)); const [status, setStatus] = useState<StatusFilter>("all"); const [query, setQuery] = useState("");
-  const [reservations, setReservations] = useState(initial.ok ? initial.reservations.filter((item) => item.status !== "cancelled") : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
-  const [details, setDetails] = useState<LiveReservation | null>(() => initial.ok && initialReservationId ? initial.reservations.find((item) => item.id === initialReservationId && item.status !== "cancelled") ?? null : null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [arriveTarget, setArriveTarget] = useState<LiveReservation | null>(null); const [tableMode, setTableMode] = useState<"arrive" | "edit">("arrive"); const [arrivalTables, setArrivalTables] = useState<TableNumber[]>([]); const [tableAssignments, setTableAssignments] = useState<Record<number, string>>({}); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [reservations, setReservations] = useState(initial.ok ? initial.reservations : []); const [result, setResult] = useState(initial); const [loadedRange, setLoadedRange] = useState({ start: initialStart, end: initialEnd }); const [hiddenReservationIds, setHiddenReservationIds] = useState<Set<string>>(() => { if (typeof window === "undefined") return new Set(); try { const saved = JSON.parse(window.localStorage.getItem(hiddenReservationStorageKey) ?? "[]"); return new Set(Array.isArray(saved) ? saved.filter((value): value is string => typeof value === "string") : []); } catch { return new Set(); } });
+  const [details, setDetails] = useState<LiveReservation | null>(() => initial.ok && initialReservationId ? initial.reservations.find((item) => item.id === initialReservationId) ?? null : null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [arriveTarget, setArriveTarget] = useState<LiveReservation | null>(null); const [tableMode, setTableMode] = useState<"arrive" | "edit">("arrive"); const [arrivalTables, setArrivalTables] = useState<TableNumber[]>([]); const [tableAssignments, setTableAssignments] = useState<Record<number, string>>({}); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
   const [transitionPending, startTransition] = useTransition(); const [saving, setSaving] = useState(false); const pending = saving || transitionPending; const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const pendingCreatesRef = useRef(new Map<string, { reservation: LiveReservation; expiresAt: number }>());
   const submitLockRef = useRef(false);
@@ -56,7 +56,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
   const visibleReservations = useCallback((next: ReservationLoadResult) => {
     if (!next.ok) return [];
-    const visible = next.reservations.filter((item) => item.status !== "cancelled" && !hiddenReservationIds.has(item.id));
+    const visible = next.reservations.filter((item) => !hiddenReservationIds.has(item.id));
     const visibleIds = new Set(visible.map((item) => item.id));
     const nowMs = Date.now();
     for (const [id, pendingCreate] of pendingCreatesRef.current) {
@@ -147,15 +147,10 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
         setDetails((current) => current?.id === response.reservation!.id ? null : current);
       } else if (response.reservation) {
         if (values.action === "create") pendingCreatesRef.current.set(response.reservation.id, { reservation: response.reservation as LiveReservation, expiresAt: Date.now() + 60_000 });
-        if (response.reservation.status === "cancelled") {
-          setReservations((current) => current.filter((item) => item.id !== response.reservation?.id));
-          setDetails((current) => current?.id === response.reservation?.id ? null : current);
-        } else {
-          setReservations((current) => current.some((item) => item.id === response.reservation?.id)
-            ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
-            : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
-          setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
-        }
+        setReservations((current) => current.some((item) => item.id === response.reservation?.id)
+          ? current.map((item) => item.id === response.reservation?.id ? response.reservation as LiveReservation : item)
+          : [...current, response.reservation as LiveReservation].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+        setDetails((current) => current?.id === response.reservation?.id ? response.reservation as LiveReservation : current);
       }
       submitLockRef.current = false;
       setSaving(false);
@@ -221,7 +216,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
     <div className="reservation-toolbar daily-reservations-toolbar"><div className="daily-reservations-label">{t("dailyReservations")}</div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
-        <option value="all">{c("all")}</option>{(["confirmed", "arrived", "completed", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
+        <option value="all">{c("all")}</option>{(["confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
       </select></div></div>
     <div className={`reservation-workspace${details && !editing ? " has-details" : ""}`}><div className="reservation-list-column"><div className="reservations-summary"><span className="result-count">{t("resultCount", { count: shown.length })}</span></div>
     {shown.length ? <div className="bulk-selection-bar"><label><input type="checkbox" checked={shown.every((item) => selectedIds.has(item.id))} onChange={toggleAllShown} aria-label={t("selectAll")} />{t("selectAll")}</label>{selectedIds.size ? <><span>{t("selectedCount", { count: selectedIds.size })}</span><button type="button" className="button-danger button-compact" onClick={() => setConfirmBulkDelete(true)}><Trash2 size={14} />{t("deleteSelected")}</button></> : null}</div> : null}
