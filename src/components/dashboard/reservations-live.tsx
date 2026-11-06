@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Ban, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
+import { Ban, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, LoaderCircle, Mail, MapPin, Monitor, MoreHorizontal, Pencil, Phone, Plus, RefreshCw, Search, Trash2, UserRoundCheck, UsersRound, UserX, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
@@ -50,32 +50,37 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const [details, setDetails] = useState<LiveReservation | null>(() => initial.ok && initialReservationId ? initial.reservations.find((item) => item.id === initialReservationId) ?? null : null); const [editing, setEditing] = useState(false); const [creating, setCreating] = useState(false); const [confirmCancel, setConfirmCancel] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [confirmBulkDelete, setConfirmBulkDelete] = useState(false); const [arriveTarget, setArriveTarget] = useState<LiveReservation | null>(null); const [tableMode, setTableMode] = useState<"arrive" | "edit">("arrive"); const [arrivalTables, setArrivalTables] = useState<TableNumber[]>([]); const [tableAssignments, setTableAssignments] = useState<Record<number, string>>({}); const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); const [bulkDeleting, setBulkDeleting] = useState(false);
   const [transitionPending, startTransition] = useTransition(); const [saving, setSaving] = useState(false); const pending = saving || transitionPending; const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [now, setNow] = useState(() => Date.now());
   const pendingCreatesRef = useRef(new Map<string, { reservation: LiveReservation; expiresAt: number }>());
+  const hiddenIdsRef = useRef(hiddenReservationIds);
+  useEffect(() => { hiddenIdsRef.current = hiddenReservationIds; }, [hiddenReservationIds]);
   const submitLockRef = useRef(false);
   useEffect(() => { void loadTableAssignments().then((next) => { if (next.ok) setTableAssignments(Object.fromEntries(next.assignments.map((item) => [item.tableNumber, item.reservationId]))); }); }, []);
   const start = key(date); const end = start;
 
   const visibleReservations = useCallback((next: ReservationLoadResult) => {
     if (!next.ok) return [];
-    const visible = next.reservations.filter((item) => !hiddenReservationIds.has(item.id));
+    const visible = next.reservations.filter((item) => !hiddenIdsRef.current.has(item.id));
     const visibleIds = new Set(visible.map((item) => item.id));
     const nowMs = Date.now();
     for (const [id, pendingCreate] of pendingCreatesRef.current) {
       if (pendingCreate.expiresAt <= nowMs) { pendingCreatesRef.current.delete(id); continue; }
       if (visibleIds.has(id)) pendingCreatesRef.current.delete(id);
-      else if (pendingCreate.reservation.date >= start && pendingCreate.reservation.date <= end && !hiddenReservationIds.has(id)) visible.push(pendingCreate.reservation);
+      else if (pendingCreate.reservation.date >= start && pendingCreate.reservation.date <= end && !hiddenIdsRef.current.has(id)) visible.push(pendingCreate.reservation);
     }
     return visible.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  }, [end, hiddenReservationIds, start]);
+  }, [end, start]);
 
   const refreshRef = useRef<() => void>(() => undefined);
   const refreshLive = () => { refreshRef.current(); };
   const realtimeAvailable = useReservationRealtime(refreshLive);
+  const [refreshing, setRefreshing] = useState(false);
 
-  async function refresh() {
-    const next = await loadReservations(loadedRange.start, loadedRange.end); const visible = visibleReservations(next);
+  async function refresh(manual = false) {
+    if (manual) setRefreshing(true);
+    const next = await loadReservations(start, end); const visible = visibleReservations(next);
     setResult(next.ok ? { ...next, reservations: visible } : next);
-    if (next.ok) setReservations(visible);
-    if (details && next.ok) setDetails(visible.find((item) => item.id === details.id) ?? null);
+    if (next.ok) { setReservations(visible); setLoadedRange({ start, end }); }
+    setDetails((current) => current && next.ok ? visible.find((item) => item.id === current.id) ?? null : current);
+    if (manual) setRefreshing(false);
   }
   useEffect(() => {
     refreshRef.current = () => { void refresh(); };
@@ -213,7 +218,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const sourceLabel = (source: BookingSource) => source === "website" ? c("online") : source === "phone" ? c("telephone") : c("walkIn");
 
   return <>
-    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
+    <PageIntro eyebrow="" title={t("title")} description={title} action={<div className="reservation-header-actions"><div className="date-controls"><button className="icon-button" aria-label={t("previousDay")} onClick={() => step(-1)}><ChevronLeft size={16} /></button><span className="range-date"><CalendarDays size={16} />{title}</span><button className="icon-button" aria-label={t("nextDay")} onClick={() => step(1)}><ChevronRight size={16} /></button></div><button className="button-quiet today-button" onClick={() => setDate(new Date(`${today}T12:00:00`))}>{c("today")}</button><button type="button" className="button-secondary button-compact" disabled={refreshing} onClick={() => void refresh(true)} aria-label={c("refresh")} title={c("refresh")}><RefreshCw size={14} className={refreshing ? "spin" : undefined} />{c("refresh")}</button><button className="button-primary new-booking-button" onClick={() => { setCreating(true); setError(""); }}><Plus size={16} />{c("newReservation")}</button></div>} />
     <div className="reservation-toolbar daily-reservations-toolbar"><div className="daily-reservations-label">{t("dailyReservations")}</div><div className="toolbar-lower"><label className="search-field"><Search size={14} /><input aria-label={t("searchLabel")} placeholder={t("searchPlaceholder")} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <select className="select-control" aria-label={t("filter")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
         <option value="all">{c("all")}</option>{(["confirmed", "arrived", "completed", "cancelled", "no_show"] as const).map((item) => <option key={item} value={item}>{statusName(item)}</option>)}
