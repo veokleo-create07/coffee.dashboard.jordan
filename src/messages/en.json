@@ -17,6 +17,7 @@
     "tables": "Tables"
     ,"enableNotifications": "Enable notifications"
     ,"notificationsEnabled": "Notifications enabled"
+    ,"notificationsUnavailable": "Allow notifications in device settings"
   },
   "Common": {
     "newReservation": "New reservation",

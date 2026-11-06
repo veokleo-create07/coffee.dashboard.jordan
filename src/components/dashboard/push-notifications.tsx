@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { savePushSubscription } from "@/app/dashboard/actions";
@@ -14,7 +14,8 @@ function decodeKey(value: string) {
 export function PushNotifications() {
   const t = useTranslations("Navigation");
   const [enabled, setEnabled] = useState(false);
-  const [busy, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
 
   useEffect(() => {
@@ -40,20 +41,44 @@ export function PushNotifications() {
   }
 
   if (!publicKey) return null;
-  return <button
-    type="button"
-    className="notification-setup"
-    disabled={busy || enabled}
-    aria-label={enabled ? t("notificationsEnabled") : t("enableNotifications")}
-    title={enabled ? t("notificationsEnabled") : t("enableNotifications")}
-    onClick={() => startTransition(async () => {
-      if (Notification.permission === "denied") return;
+  async function handleEnable() {
+    if (busy || enabled || !publicKey) return;
+    setFailed(false);
+    setBusy(true);
+    try {
+      if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        setFailed(true);
+        return;
+      }
+      // Keep this directly inside the click handler. Safari requires the
+      // permission prompt to be initiated by a user gesture.
       const permission = await Notification.requestPermission();
-      if (permission !== "granted" || !publicKey) return;
-      setEnabled(await registerSubscription(publicKey));
-    })}
-  >
-    {enabled ? <Bell size={14} /> : <BellOff size={14} />}
-    <span>{enabled ? t("notificationsEnabled") : t("enableNotifications")}</span>
-  </button>;
+      if (permission !== "granted") {
+        setFailed(true);
+        return;
+      }
+      const subscribed = await registerSubscription(publicKey);
+      setEnabled(subscribed);
+      if (!subscribed) setFailed(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <>
+    <button
+      type="button"
+      className="notification-setup"
+      disabled={busy || enabled}
+      aria-label={enabled ? t("notificationsEnabled") : t("enableNotifications")}
+      title={enabled ? t("notificationsEnabled") : t("enableNotifications")}
+      onClick={() => void handleEnable()}
+    >
+      {enabled ? <Bell size={14} /> : <BellOff size={14} />}
+      <span>{enabled ? t("notificationsEnabled") : t("enableNotifications")}</span>
+    </button>
+    {failed ? <span className="notification-setup-error" role="status">{t("notificationsUnavailable")}</span> : null}
+  </>;
 }

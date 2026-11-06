@@ -17,6 +17,7 @@
     "tables": "Tische"
     ,"enableNotifications": "Benachrichtigungen aktivieren"
     ,"notificationsEnabled": "Benachrichtigungen aktiviert"
+    ,"notificationsUnavailable": "Benachrichtigungen in den Geräteeinstellungen erlauben"
   },
   "Common": {
     "newReservation": "Neue Reservierung",
