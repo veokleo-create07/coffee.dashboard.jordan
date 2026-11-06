@@ -15,6 +15,10 @@ create table if not exists public.staff_push_subscriptions (
 alter table public.staff_push_subscriptions enable row level security;
 revoke all on table public.staff_push_subscriptions from public, anon, authenticated;
 grant select, insert, update, delete on table public.staff_push_subscriptions to authenticated;
+-- The public website reads and removes expired endpoints with its server-only
+-- service-role client. Grant that role explicitly; authenticated staff remain
+-- constrained by the RLS policy below.
+grant select, delete on table public.staff_push_subscriptions to service_role;
 
 drop policy if exists "Staff can manage their push subscriptions" on public.staff_push_subscriptions;
 create policy "Staff can manage their push subscriptions"
