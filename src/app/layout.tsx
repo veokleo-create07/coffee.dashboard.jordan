@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: { default: "Altstadtliebe · Team", template: "%s · Altstadtliebe" },
   description: "Der interne Arbeitsbereich für das Team von Altstadtliebe.",
   robots: { index: false, follow: false },
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/altstadtliebe-logo.png", apple: "/altstadtliebe-logo.png" },
 };
 
 export const viewport: Viewport = {

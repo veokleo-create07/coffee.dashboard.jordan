@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Grid2X2, LayoutDashboard, LogOut, UtensilsCrossed } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -15,7 +16,7 @@ function Brand() {
   </Link>;
 }
 
-export function DashboardNavigation({ email }: { email?: string | null }) {
+export function DashboardNavigation({ email, notificationControl }: { email?: string | null; notificationControl?: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations("Navigation");
@@ -37,11 +38,11 @@ export function DashboardNavigation({ email }: { email?: string | null }) {
         })}
       </nav>
       <div className="sidebar-bottom">
-        <div className="sidebar-account-controls"><LanguageSwitcher /><form action={signOut}><button aria-label={t("logout")} className="sidebar-logout"><LogOut size={14} /><span>{t("logout")}</span></button></form></div>
+        <div className="sidebar-account-controls"><LanguageSwitcher />{notificationControl}<form action={signOut}><button aria-label={t("logout")} className="sidebar-logout"><LogOut size={14} /><span>{t("logout")}</span></button></form></div>
         <span className="open-indicator"><i /> {t("open")}</span>{email ? <p className="sidebar-email" title={email}>{email}</p> : null}
       </div>
     </aside>
-    <div className="mobile-brand md:hidden"><Brand /><div className="mobile-account-controls"><LanguageSwitcher /><form action={signOut}><button aria-label={t("logout")} className="mobile-logout"><LogOut size={16} /></button></form></div></div>
+    <div className="mobile-brand md:hidden"><Brand /><div className="mobile-account-controls"><LanguageSwitcher />{notificationControl}<form action={signOut}><button aria-label={t("logout")} className="mobile-logout"><LogOut size={16} /></button></form></div></div>
     <nav className="mobile-navigation md:hidden" aria-label={t("workspace")}>
       {links.map(({ label, href, icon: Icon }) => {
         const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);

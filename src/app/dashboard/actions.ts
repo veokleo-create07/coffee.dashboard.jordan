@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthenticatedContext } from "@/lib/auth/staff";
+import { getAuthenticatedContext, getStaffContext } from "@/lib/auth/staff";
 
 export type ReservationStatus = "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show";
 export type BookingSource = "website" | "phone" | "walk_in";
@@ -25,6 +25,7 @@ export type OccupancyResult =
   | { ok: true; guests: number; visits: Array<{ id: string; guests: number; arrivedAt: string | null }> }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
 export type AnalyticsPeriod = "day" | "week" | "month";
+export type PushSubscriptionInput = { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string };
 export type AnalyticsResult =
   | { ok: true; period: AnalyticsPeriod; startDate: string; endDate: string; totals: { reservations: number; guests: number; cancellations: number; noShows: number; arrivals: number; completed: number }; trend: Array<{ date: string; reservations: number; guests: number }>; hours: Array<{ hour: number; reservations: number }>; sources: Array<{ source: BookingSource; reservations: number; guests: number }> }
   | { ok: false; reason: "unauthorized" | "permission" | "unavailable" };
@@ -75,6 +76,32 @@ function addDays(date: string, days: number) {
 }
 async function authenticatedClient() {
   return (await getAuthenticatedContext())?.supabase ?? null;
+}
+
+export async function savePushSubscription(input: PushSubscriptionInput): Promise<{ ok: true } | { ok: false; reason: "unauthorized" | "unavailable" }> {
+  const context = await getStaffContext();
+  if (!context) return { ok: false, reason: "unauthorized" };
+  if (
+    !input ||
+    typeof input.endpoint !== "string" ||
+    !input.endpoint.startsWith("https://") ||
+    input.endpoint.length > 2048 ||
+    !input.keys ||
+    typeof input.keys.p256dh !== "string" ||
+    typeof input.keys.auth !== "string" ||
+    input.keys.p256dh.length > 512 ||
+    input.keys.auth.length > 512
+  ) return { ok: false, reason: "unavailable" };
+
+  const { error } = await context.supabase.from("staff_push_subscriptions").upsert({
+    user_id: context.user.id,
+    endpoint: input.endpoint,
+    p256dh: input.keys.p256dh,
+    auth: input.keys.auth,
+    user_agent: typeof input.userAgent === "string" ? input.userAgent.slice(0, 500) : null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "endpoint" });
+  return error ? { ok: false, reason: "unavailable" } : { ok: true };
 }
 function mapRow(row: ReservationRow): LiveReservation {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(row.starts_at));

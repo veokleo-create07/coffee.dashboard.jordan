@@ -1,0 +1,19 @@
+{
+  "name": "Altstadtliebe Team Dashboard",
+  "short_name": "Altstadtliebe",
+  "description": "Interne Reservierungs- und Tischverwaltung für Altstadtliebe.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f1eb",
+  "theme_color": "#29201b",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/altstadtliebe-logo.png",
+      "sizes": "1254x500",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

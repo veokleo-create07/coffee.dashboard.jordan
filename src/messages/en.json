@@ -15,6 +15,8 @@
     "internal": "ALTSTADTLIEBE · INTERNAL",
     "date": "Saturday, October 24, 2026",
     "tables": "Tables"
+    ,"enableNotifications": "Enable notifications"
+    ,"notificationsEnabled": "Notifications enabled"
   },
   "Common": {
     "newReservation": "New reservation",
