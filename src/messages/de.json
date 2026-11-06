@@ -17,7 +17,11 @@
     "tables": "Tische"
     ,"enableNotifications": "Benachrichtigungen aktivieren"
     ,"notificationsEnabled": "Benachrichtigungen aktiviert"
-    ,"notificationsUnavailable": "Benachrichtigungen in den Geräteeinstellungen erlauben"
+    ,"notificationsPermission": "Benachrichtigungen sind für diese Website blockiert. Erlaube sie in den Website-Einstellungen des Browsers und versuche es erneut."
+    ,"notificationsUnsupported": "Dieser Browser unterstützt keine Push-Benachrichtigungen."
+    ,"notificationsConfiguration": "Benachrichtigungen konnten nicht eingerichtet werden. Prüfe die Push-Konfiguration des Dashboards."
+    ,"notificationsDatabase": "Benachrichtigungen konnten nicht gespeichert werden. Wende die Push-Subscriptions-Migration in Supabase an."
+    ,"notificationsUnauthorized": "Deine Staff-Sitzung ist für Benachrichtigungen nicht autorisiert. Melde dich erneut an."
   },
   "Common": {
     "newReservation": "Neue Reservierung",

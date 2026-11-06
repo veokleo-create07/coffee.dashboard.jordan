@@ -78,7 +78,7 @@ async function authenticatedClient() {
   return (await getAuthenticatedContext())?.supabase ?? null;
 }
 
-export async function savePushSubscription(input: PushSubscriptionInput): Promise<{ ok: true } | { ok: false; reason: "unauthorized" | "unavailable" }> {
+export async function savePushSubscription(input: PushSubscriptionInput): Promise<{ ok: true } | { ok: false; reason: "unauthorized" | "unavailable" | "database" }> {
   const context = await getStaffContext();
   if (!context) return { ok: false, reason: "unauthorized" };
   if (
@@ -101,7 +101,7 @@ export async function savePushSubscription(input: PushSubscriptionInput): Promis
     user_agent: typeof input.userAgent === "string" ? input.userAgent.slice(0, 500) : null,
     updated_at: new Date().toISOString(),
   }, { onConflict: "endpoint" });
-  return error ? { ok: false, reason: "unavailable" } : { ok: true };
+  return error ? { ok: false, reason: "database" } : { ok: true };
 }
 function mapRow(row: ReservationRow): LiveReservation {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(row.starts_at));

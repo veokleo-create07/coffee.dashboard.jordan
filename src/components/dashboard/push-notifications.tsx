@@ -15,7 +15,7 @@ export function PushNotifications() {
   const t = useTranslations("Navigation");
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<"permission" | "unsupported" | "configuration" | "database" | "unauthorized" | null>(null);
   const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
 
   useEffect(() => {
@@ -23,45 +23,54 @@ export function PushNotifications() {
     void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
     if (!publicKey || !("PushManager" in window) || !("Notification" in window)) return;
     if (Notification.permission === "granted") {
-      void registerSubscription(publicKey).then(setEnabled);
+      void registerSubscription(publicKey).then((result) => {
+        setEnabled(result.ok);
+        if (!result.ok) setFailure(result.reason);
+      });
     }
   }, [publicKey]);
 
-  async function registerSubscription(key: string) {
+  async function registerSubscription(key: string): Promise<{ ok: true } | { ok: false; reason: "configuration" | "database" | "unauthorized" }> {
     try {
+      const decodedKey = decodeKey(key.trim());
+      if (decodedKey.length !== 65) return { ok: false, reason: "configuration" };
       const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodeKey(key) });
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodedKey });
       const json = subscription.toJSON();
-      if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) return false;
+      if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) return { ok: false, reason: "configuration" };
       const result = await savePushSubscription({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth }, userAgent: navigator.userAgent });
-      return result.ok;
+      return result.ok ? result : { ok: false, reason: result.reason === "unauthorized" ? "unauthorized" : "database" };
     } catch {
-      return false;
+      return { ok: false, reason: "configuration" };
     }
   }
 
   if (!publicKey) return null;
   async function handleEnable() {
     if (busy || enabled || !publicKey) return;
-    setFailed(false);
+    setFailure(null);
     setBusy(true);
     try {
       if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-        setFailed(true);
+        setFailure("unsupported");
+        return;
+      }
+      if (Notification.permission === "denied") {
+        setFailure("permission");
         return;
       }
       // Keep this directly inside the click handler. Safari requires the
       // permission prompt to be initiated by a user gesture.
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setFailed(true);
+        setFailure("permission");
         return;
       }
-      const subscribed = await registerSubscription(publicKey);
-      setEnabled(subscribed);
-      if (!subscribed) setFailed(true);
+      const result = await registerSubscription(publicKey);
+      setEnabled(result.ok);
+      if (!result.ok) setFailure(result.reason);
     } catch {
-      setFailed(true);
+      setFailure("configuration");
     } finally {
       setBusy(false);
     }
@@ -79,6 +88,6 @@ export function PushNotifications() {
       {enabled ? <Bell size={14} /> : <BellOff size={14} />}
       <span>{enabled ? t("notificationsEnabled") : t("enableNotifications")}</span>
     </button>
-    {failed ? <span className="notification-setup-error" role="status">{t("notificationsUnavailable")}</span> : null}
+    {failure ? <span className="notification-setup-error" role="status">{t(`notifications${failure[0].toUpperCase()}${failure.slice(1)}`)}</span> : null}
   </>;
 }

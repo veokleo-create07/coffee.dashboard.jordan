@@ -17,7 +17,11 @@
     "tables": "Tables"
     ,"enableNotifications": "Enable notifications"
     ,"notificationsEnabled": "Notifications enabled"
-    ,"notificationsUnavailable": "Allow notifications in device settings"
+    ,"notificationsPermission": "Notifications are blocked for this site. Allow them in the browser's site settings, then try again."
+    ,"notificationsUnsupported": "This browser does not support push notifications."
+    ,"notificationsConfiguration": "Notifications could not be set up. Check the dashboard push configuration."
+    ,"notificationsDatabase": "Notifications could not be saved. Apply the push-subscriptions migration in Supabase."
+    ,"notificationsUnauthorized": "Your staff session is not authorized for notifications. Sign in again."
   },
   "Common": {
     "newReservation": "New reservation",
