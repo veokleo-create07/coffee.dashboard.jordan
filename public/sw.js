@@ -13,7 +13,7 @@ self.addEventListener("push", (event) => {
     icon: "/altstadtliebe-logo.png",
     badge: "/altstadtliebe-logo.png",
     data: { url: typeof payload.url === "string" ? payload.url : "/dashboard/reservations" },
-    tag: "altstadtliebe-reservation",
+    tag: typeof payload.tag === "string" ? payload.tag : "altstadtliebe-reservation",
     renotify: true,
   }));
 });
