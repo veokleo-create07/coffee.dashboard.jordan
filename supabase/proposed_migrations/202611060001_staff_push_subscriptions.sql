@@ -27,5 +27,10 @@ create policy "Staff can manage their push subscriptions"
   using (user_id = auth.uid() and public.staff_reservation_access(false))
   with check (user_id = auth.uid() and public.staff_reservation_access(false));
 
+-- RLS invokes this SECURITY DEFINER membership check as the authenticated
+-- staff user. Its earlier global revoke otherwise makes the policy itself fail
+-- with 42501, even when the user has table privileges and is a staff member.
+grant execute on function public.staff_reservation_access(boolean) to authenticated;
+
 create index if not exists staff_push_subscriptions_user_id_idx
   on public.staff_push_subscriptions(user_id);
