@@ -59,6 +59,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar-bottom { display: grid; gap: 12px; margin-top: auto; border-top: 1px solid var(--ref-border); padding: 15px 5px 0; }
 .sidebar-account-controls { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
 .sidebar-account-controls form { display: flex; }
+.notification-control { display: grid; gap: 5px; }
+.notification-setup { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--ref-border); border-radius: 9px; background: #fffdfa; padding: 7px 10px; color: var(--ref-espresso); font-size: 11px; font-weight: 650; line-height: 1.25; text-align: center; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+.notification-setup:hover:not(:disabled) { border-color: var(--ref-espresso); background: var(--ref-soft); }
+.notification-setup.is-enabled { border-color: #c8d6c3; background: #f1f6ee; color: #496347; }
+.notification-setup:disabled { cursor: default; }
+.notification-setup-error { display: block; padding: 0 3px; color: var(--danger); font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+@media (max-width: 767px) { .notification-control { display: none; } }
 .sidebar-logout, .mobile-logout { display: inline-flex; min-width: 34px; min-height: 34px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--ref-border); border-radius: 7px; background: transparent; color: #655d57; cursor: pointer; }
 .sidebar-logout span { display: none; }
 .sidebar-logout:hover, .mobile-logout:hover { background: var(--ref-soft); color: var(--ref-espresso); }

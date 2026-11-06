@@ -38,7 +38,8 @@ export function DashboardNavigation({ email, notificationControl }: { email?: st
         })}
       </nav>
       <div className="sidebar-bottom">
-        <div className="sidebar-account-controls"><LanguageSwitcher />{notificationControl}<form action={signOut}><button aria-label={t("logout")} className="sidebar-logout"><LogOut size={14} /><span>{t("logout")}</span></button></form></div>
+        {notificationControl}
+        <div className="sidebar-account-controls"><LanguageSwitcher /><form action={signOut}><button aria-label={t("logout")} className="sidebar-logout"><LogOut size={14} /><span>{t("logout")}</span></button></form></div>
         <span className="open-indicator"><i /> {t("open")}</span>{email ? <p className="sidebar-email" title={email}>{email}</p> : null}
       </div>
     </aside>

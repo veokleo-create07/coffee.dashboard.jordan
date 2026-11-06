@@ -76,10 +76,10 @@ export function PushNotifications() {
     }
   }
 
-  return <>
+  return <div className="notification-control">
     <button
       type="button"
-      className="notification-setup"
+      className={`notification-setup${enabled ? " is-enabled" : ""}`}
       disabled={busy || enabled}
       aria-label={enabled ? t("notificationsEnabled") : t("enableNotifications")}
       title={enabled ? t("notificationsEnabled") : t("enableNotifications")}
@@ -89,5 +89,5 @@ export function PushNotifications() {
       <span>{enabled ? t("notificationsEnabled") : t("enableNotifications")}</span>
     </button>
     {failure ? <span className="notification-setup-error" role="status">{t(`notifications${failure[0].toUpperCase()}${failure.slice(1)}`)}</span> : null}
-  </>;
+  </div>;
 }
