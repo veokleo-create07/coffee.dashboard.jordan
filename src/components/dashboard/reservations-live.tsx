@@ -58,7 +58,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
 
   const visibleReservations = useCallback((next: ReservationLoadResult) => {
     if (!next.ok) return [];
-    const visible = next.reservations.filter((item) => !hiddenIdsRef.current.has(item.id));
+    const visible = next.reservations.filter((item) => item.status !== "cancelled" && !hiddenIdsRef.current.has(item.id));
     const visibleIds = new Set(visible.map((item) => item.id));
     const nowMs = Date.now();
     for (const [id, pendingCreate] of pendingCreatesRef.current) {
@@ -120,7 +120,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
   const deferredQuery = useDeferredValue(query);
   const periodReservations = useMemo(() => reservations.filter((item) => item.date === start), [reservations, start]);
   const shown = useMemo(() => periodReservations.filter((item) => {
-    if (status !== "all" && item.status !== status) return false;
+    if (item.status === "cancelled" || (status !== "all" && item.status !== status)) return false;
     const term = deferredQuery.trim().toLocaleLowerCase(locale);
     return !term || `${item.guest} ${item.email ?? ""} ${item.phone ?? ""} ${item.reference}`.toLocaleLowerCase(locale).includes(term);
   }), [deferredQuery, locale, periodReservations, status]);
