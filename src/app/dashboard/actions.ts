@@ -309,4 +309,33 @@ export async function cancelReservations(ids: string[]): Promise<BulkReservation
     return { succeeded: [], failed: uniqueIds.map((id) => ({ id, code: "UNAVAILABLE" })) };
   }
 }
+export async function deleteCancelledReservation(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, code: "INVALID_INPUT" };
+  try {
+    const supabase = await authenticatedClient();
+    if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const { data, error } = await supabase.rpc("staff_delete_cancelled_reservation", { p_reservation_id: id });
+    if (error) return { ok: false, code: getErrorCode(error) };
+    return data === true ? { ok: true } : { ok: false, code: "NOT_FOUND" };
+  } catch { return { ok: false, code: "UNAVAILABLE" }; }
+}
+export async function deleteReservationPermanently(id: string): Promise<{ ok: true } | { ok: false; code: string }> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, code: "INVALID_INPUT" };
+  try {
+    const supabase = await authenticatedClient();
+    if (!supabase) return { ok: false, code: "NOT_STAFF" };
+    const { data: row, error: readError } = await supabase.from("reservations").select("status").eq("id", id).maybeSingle();
+    if (readError) return { ok: false, code: getErrorCode(readError) };
+    if (!row) return { ok: false, code: "NOT_FOUND" };
+    if (row.status !== "cancelled") {
+      const { error: cancelError } = await supabase.rpc("staff_manage_reservation", {
+        p_action: "status", p_reservation_id: id, p_target_status: "cancelled",
+      });
+      if (cancelError) return { ok: false, code: getErrorCode(cancelError) };
+    }
+    const { data, error } = await supabase.rpc("staff_delete_cancelled_reservation", { p_reservation_id: id });
+    if (error) return { ok: false, code: getErrorCode(error) };
+    return data === true ? { ok: true } : { ok: false, code: "NOT_FOUND" };
+  } catch { return { ok: false, code: "UNAVAILABLE" }; }
+}
 export async function signOut() { const supabase = await createClient(); await supabase.auth.signOut(); redirect("/login"); }

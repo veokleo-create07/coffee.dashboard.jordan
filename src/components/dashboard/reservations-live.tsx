@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { PageIntro } from "@/components/dashboard/primitives";
 import { Modal, Toast } from "@/components/dashboard/dialog";
 import { useReservationRealtime } from "@/lib/dashboard/use-reservation-realtime";
-import { arriveWithTables, assignReservationTables, cancelReservations, loadReservations, loadTableAssignments, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus, type TableNumber } from "@/app/dashboard/actions";
+import { arriveWithTables, assignReservationTables, deleteReservationPermanently, loadReservations, loadTableAssignments, manageReservation, type BookingSource, type LiveReservation, type ReservationActionResult, type ReservationLoadResult, type ReservationStatus, type TableNumber } from "@/app/dashboard/actions";
 
 type StatusFilter = "all" | LiveReservation["status"];
 const statusClass: Record<ReservationStatus, string> = { pending: "status-pending", confirmed: "status-confirmed", arrived: "status-arrived", completed: "status-completed", cancelled: "status-cancelled", no_show: "status-no-show" };
@@ -180,9 +180,9 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     const ids = [...selectedIds].filter((id) => shown.some((item) => item.id === id));
     if (!ids.length) return;
     setBulkDeleting(true); setError("");
-    const response = await cancelReservations(ids);
-    const succeeded = response.succeeded;
-    const firstError = response.failed[0] ? translatedError(response.failed[0].code) : "";
+    const results = await Promise.all(ids.map(async (id) => ({ id, result: await deleteReservationPermanently(id) })));
+    const succeeded = results.filter(({ result }) => result.ok).map(({ id }) => id);
+    const firstError = results.find(({ result }) => !result.ok);
     if (succeeded.length) {
       setHiddenReservationIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.add(id)); window.localStorage.setItem(hiddenReservationStorageKey, JSON.stringify([...next])); return next; });
       setReservations((current) => current.filter((item) => !succeeded.includes(item.id)));
@@ -190,7 +190,19 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
       setSelectedIds((current) => { const next = new Set(current); succeeded.forEach((id) => next.delete(id)); return next; });
       setMessage(t("success.bulkDeleted", { count: succeeded.length }));
     }
-    setBulkDeleting(false); setConfirmBulkDelete(false); if (firstError) setError(firstError);
+    setBulkDeleting(false); setConfirmBulkDelete(false); if (firstError && !firstError.result.ok) setError(translatedError(firstError.result.code));
+  }
+  async function deleteBookingPermanently() {
+    if (!details || pending) return;
+    setSaving(true); setError("");
+    const target = details;
+    const response = await deleteReservationPermanently(target.id);
+    setSaving(false);
+    if (!response.ok) { setError(translatedError(response.code)); return; }
+    setHiddenReservationIds((current) => { const next = new Set(current).add(target.id); window.localStorage.setItem(hiddenReservationStorageKey, JSON.stringify([...next])); return next; });
+    setReservations((current) => current.filter((item) => item.id !== target.id));
+    setDetails(null); setConfirmDelete(false); setSelectedIds((current) => { const next = new Set(current); next.delete(target.id); return next; });
+    setMessage(t("success.deleted"));
   }
   function saveTableAssignment() {
     if (!arriveTarget || pending || !arrivalTables.length) return;
@@ -268,7 +280,7 @@ export function ReservationsLive({ today, initialStart, initialEnd, initial, ini
     <Modal open={confirmCancel} variant="confirm" title={t("cancelTitle")} subtitle={details?.guest} onClose={() => setConfirmCancel(false)} footer={<><button className="button-secondary" onClick={() => setConfirmCancel(false)}>{t("keep")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" })}>{pending ? t("saving") : t("actions.cancel")}</button></>}>
       <p className="cancel-confirm-copy">{t("cancelDescription")}</p><p className="detail-muted">{t("capacityRelease")}</p>
     </Modal>
-    <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => details && submit({ action: "status", id: details.id, status: "cancelled" }, { removeFromView: true })}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
+    <Modal open={confirmDelete} variant="confirm" title={t("deleteTitle")} subtitle={details?.guest} onClose={() => setConfirmDelete(false)} footer={<><button className="button-secondary" disabled={pending} onClick={() => setConfirmDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={pending} onClick={() => void deleteBookingPermanently()}>{pending ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteConfirm")}</>}</button></>}>
       <p className="cancel-confirm-copy">{t("deleteDescription")}</p>
     </Modal>
     <Modal open={confirmBulkDelete} variant="confirm" title={t("bulkDeleteTitle")} subtitle={t("selectedCount", { count: selectedIds.size })} onClose={() => { if (!bulkDeleting) setConfirmBulkDelete(false); }} footer={<><button className="button-secondary" disabled={bulkDeleting} onClick={() => setConfirmBulkDelete(false)}>{c("cancel")}</button><button className="button-danger" disabled={bulkDeleting} onClick={() => void deleteSelected()}>{bulkDeleting ? <><LoaderCircle size={14} className="spin" />{t("saving")}</> : <><Trash2 size={14} />{t("deleteSelected")}</>}</button></>}>
