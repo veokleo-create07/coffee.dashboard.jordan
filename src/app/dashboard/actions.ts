@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedContext, getStaffContext } from "@/lib/auth/staff";
-import { sendReviewRequestEmail } from "@/lib/email/send-review-request";
 
 export type ReservationStatus = "pending" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show";
 export type BookingSource = "website" | "phone" | "walk_in";
@@ -41,7 +40,6 @@ type ReservationRow = {
   id: string; reservation_reference: string; customer_name: string; customer_email: string | null;
   customer_phone: string | null; booking_source: BookingSource; guest_count: number; starts_at: string;
   arrived_at: string | null; departed_at: string | null; special_requests: string | null; status: ReservationStatus;
-  language?: "de" | "en"; review_email_consent_at?: string | null;
 };
 
 function berlinDateToday() {
@@ -284,18 +282,6 @@ export async function manageReservation(input: ReservationMutation): Promise<Res
     });
     if (error) return { ok: false, code: getErrorCode(error) };
     const row = data && typeof data === "object" ? data as ReservationRow : null;
-    if (input.action === "status" && input.status === "completed" && row?.customer_email && row.review_email_consent_at) {
-      try {
-        await sendReviewRequestEmail({
-          reservationId: row.id,
-          customerName: row.customer_name,
-          customerEmail: row.customer_email,
-          language: row.language === "en" ? "en" : "de",
-        });
-      } catch (emailError) {
-        console.error("Review request email skipped", emailError instanceof Error ? emailError.message : "Unknown error");
-      }
-    }
     return { ok: true, reservation: row ? mapRow(row) : undefined };
   } catch { return { ok: false, code: "UNAVAILABLE" }; }
 }
